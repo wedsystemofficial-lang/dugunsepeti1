@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DugunSepeti — Hizmetler ve Randevu</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <style>
+    :root{
+      --bg:#070b16; 
+      --card:rgba(255,255,255,.06);
+      --border:rgba(148,163,184,.18);
+      --muted:#aeb7c2;
+      --grad1:#8b5cf6; --grad2:#06b6d4; --grad3:#22d3ee;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:radial-gradient(1200px 800px at 70% -20%, rgba(34,211,238,.12), transparent 50%), radial-gradient(1000px 600px at -10% 20%, rgba(139,92,246,.12), transparent 50%), var(--bg); color:#fff; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+
+    .nav{position:sticky;top:0;z-index:40;background:linear-gradient(180deg, rgba(7,11,22,.9), rgba(7,11,22,.75));backdrop-filter: blur(8px); border-bottom:1px solid var(--border)}
+    .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800}
+    .logo-badge{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--grad1),var(--grad2));box-shadow:0 0 16px var(--grad2)}
+    .nav-cta button{background:linear-gradient(135deg,var(--grad1),var(--grad2));border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .15s ease, filter .15s ease}
+    .nav-cta button:disabled{opacity:.5;cursor:not-allowed}
+    .nav-cta button:hover{transform:translateY(-1px);filter:saturate(1.2)}
+
+    
+    .hero{max-width:1200px;margin:28px auto 8px;padding:0 20px}
+    .title{font-size:clamp(28px,5vw,46px);line-height:1.05;font-weight:800;background:linear-gradient(92deg,var(--grad1),var(--grad2),var(--grad3));-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.3px}
+    .subtitle{color:var(--muted);margin-top:6px}
+
+   
+    .controls{max-width:1200px;margin:16px auto 0;display:flex;gap:10px;flex-wrap:wrap;padding:0 20px}
+    .chip{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.04);color:#d5d9df;cursor:pointer;transition:all .15s}
+    .chip.primary{border:0;background:linear-gradient(135deg,var(--grad1),var(--grad2));color:#fff}
+    .chip:hover{transform:translateY(-1px)}
+    .search{flex:1;min-width:220px;display:flex;gap:8px}
+    .search input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#eee}
+    .search button{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+
+    
+    .wrap{max-width:1200px;margin:14px auto 80px;padding:0 20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);position:relative;transform:translateZ(0)}
+    .img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;filter:saturate(1.05);transform-origin:center}
+    .body{padding:12px}
+    .meta{display:flex;gap:10px;color:var(--muted);font-size:13px}
+    .name{font-weight:800}
+    .cta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .btn{background:linear-gradient(135deg,var(--grad1),var(--grad2));border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .fav{background:rgba(255,255,255,.08);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:10px;cursor:pointer}
+    .card:hover .img{transform:scale(1.03)}
+    .badge{position:absolute;top:10px;left:10px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.45);backdrop-filter: blur(4px);border:1px solid var(--border);font-size:12px}
+
+    /* Per-vendor mini gallery */
+    .mini-gal{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px}
+    .mini-thumb{width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; border:1px solid var(--border); box-shadow:var(--shadow); cursor:pointer; transition:transform .15s ease, opacity .15s}
+    .mini-thumb:hover{transform:translateY(-2px) scale(1.02); opacity:1}
+    .btn.big{padding:10px 14px; font-weight:700}
+
+    /* GALLERY */
+    .gallery{margin-top:28px}
+    .gtitle{font-weight:800;margin-bottom:8px}
+    .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+    .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);opacity:.92;transition:transform .15s ease,opacity .15s}
+    .thumb:hover{transform:translateY(-2px) scale(1.02);opacity:1}
+
+   
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60}
+    .modal .inner{width:min(560px,94vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1 1 220px}
+    label{display:block;color:var(--muted);font-size:13px;margin:6px 0 4px}
+    input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#eee}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .ghost{background:rgba(255,255,255,.06);border:1px solid var(--border);color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+
+    
+    @keyframes floatUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .reveal{animation:floatUp .35s ease both}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="logo"><span class="logo-badge"></span> DugunSepeti — Hizmetler</div>
+      <div class="nav-cta">
+        <a href="admin.html"><button>Admin Paneli</button></a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero reveal">
+    <div class="title">Önerilen Hizmetler & Randevu</div>
+    <div class="subtitle">Düğünün için seçilmiş kuaför/berber, fotoğrafçı ve daha fazlası. Filtrele, incele, randevunu oluştur.</div>
+    <div class="subtitle" style="margin-top:6px">Düğün ID: <b id="wid">—</b> · Bağlantı: <b id="conn">kontrol ediliyor…</b></div>
+  </header>
+
+  <section class="controls reveal">
+    <button class="chip primary" data-filter="ALL">Tümü</button>
+    <button class="chip" data-filter="KUAFOR">Kuaför / Berber</button>
+    <button class="chip" data-filter="FOTOGRAF">Fotoğrafçı</button>
+    <button class="chip" data-filter="MAKYAJ">Makyaj</button>
+    <button class="chip" data-filter="ORGANIZASYON">Organizasyon</button>
+    <button class="chip" data-filter="GELİNLİK VE AKSESUAR">Gelinlik ve Aksesuar</button>
+    <div class="search">
+      <input id="search" placeholder="Arama: isim, kategori, şehir…" />
+      <button id="clearSearch">Temizle</button>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+
+    <div class="gallery reveal">
+      <div class="gtitle">Galeri</div>
+      <div id="ggrid" class="ggrid"></div>
+    </div>
+  </main>
+
+  <!-- RANDEVU sistemi  -->
+  <div id="bookingModal" class="modal">
+    <div class="inner reveal">
+      <h3 style="margin:0 0 6px">%20 İndirimle Randevu Oluştur</h3>
+      <div id="bkVendor" class="subtitle">Seçilen hizmet</div>
+      <div class="row" style="margin-top:10px">
+        <div class="col">
+          <label>Tarih</label>
+          <input id="bkDate" type="date" />
+        </div>
+        <div class="col">
+          <label>Saat</label>
+          <input id="bkTime" type="time" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>İletişim Telefonu</label>
+          <input id="bkPhone" placeholder="+905..." />
+        </div>
+        <div class="col">
+          <label>Not</label>
+          <input id="bkNote" placeholder="Örn: prova saç + gelin çekimi" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="bkCancel" class="ghost">Vazgeç</button>
+        <button id="bkSubmit" class="btn">Randevu Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOTOĞRAF MODAL -->
+  <div id="photoModal" class="modal">
+    <div class="inner" style="max-width: min(900px, 96vw); text-align:center">
+      <h3 style="margin:0 0 10px">📷 Fotoğraflar</h3>
+      <img id="pmImg" src="" alt="vendor photo" style="width:100%; max-height:70vh; object-fit:contain; border-radius:12px; border:1px solid var(--border)" />
+      <div class="actions" style="justify-content:space-between">
+        <button id="pmPrev" class="ghost">⟨ Önceki</button>
+        <div style="display:flex; gap:8px">
+          <button id="pmClose" class="ghost">Kapat</button>
+          <a id="pmOpenRaw" href="#" target="_blank"><button class="btn">Orijinali Aç</button></a>
+        </div>
+        <button id="pmNext" class="ghost">Sonraki ⟩</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyChBoQ1PeASYybsUFyZ_iyCKwCgcq2SLPk",
+      authDomain: "wedsystem-e080a.firebaseapp.com",
+      databaseURL: "https://wedsystem-e080a-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "wedsystem-e080a",
+      storageBucket: "wedsystem-e080a.firebasestorage.app",
+      messagingSenderId: "90318782559",
+      appId: "1:90318782559:web:374f51b404735c36151bea",
+      measurementId: "G-YBXXF4V5RV"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const url = new URLSearchParams(location.search);
+    const WID = url.get('wedding') || '';
+    document.getElementById('wid').textContent = WID || '(yok)';
+
+    (async () => {
+      const connEl = document.getElementById('conn');
+      try { await db.collection('weddings').limit(1).get(); connEl.textContent = 'Bağlandı'; }
+      catch(e){ console.error(e); connEl.textContent = 'HATA'; }
+    })();
+
+    const VENDOR_CATS = { KUAFOR:'Kuaför/Berber', FOTOGRAF:'Fotoğrafçı', MAKYAJ:'Makyaj', ORGANIZASYON:'Organizasyon', 'GELİNLİK VE AKSESUAR':'Gelinlik & Aksesuar' };
+    function randomImg(seed){
+     
+      const s = String(seed||'').toUpperCase();
+      if (s.includes('KUAFOR') || s.includes('BARBER')) return 'img/kuafor1.jpg';
+      if (s.includes('FOTOGRAF') || s.includes('PHOTO')) return 'img/fotograf1.jpg';
+      if (s.includes('MAKYAJ')) return 'img/makyaj1.jpg';
+      if (s.includes('ORGANIZASYON')) return 'img/organizasyon1.jpg';
+      if (s.includes('GELINLIK') || s.includes('GELİNLİK')) return 'img/gelinlik1.jpg';
+      if (s.includes('AKSESUAR')) return 'img/aksesuar1.jpg';
+      
+      if (s.startsWith('K')) return 'img/kuafor1.jpg';
+      if (s.startsWith('F')) return 'img/fotograf1.jpg';
+      if (s.startsWith('M')) return 'img/makyaj1.jpg';
+      if (s.startsWith('O')) return 'img/organizasyon1.jpg';
+      
+      return 'img/default.jpg';
+    }
+    function stars(n){ const f=Math.floor(n||5); return '★★★★★'.slice(0,f).padEnd(5,'☆'); }
+
+    function slugifyName(name){ return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'').replace(/^\s+|\s+$/g,''); }
+    function vendorPhotos(v){
+      const slug = slugifyName(v.name||v.id||'vendor');
+      // Local-first list (you can add more than 3 if available)
+      const locals = [
+        `img/gallery/${slug}1.jpg`,
+        `img/gallery/${slug}2.jpg`,
+        `img/gallery/${slug}3.jpg`
+      ];
+      // Fallbacks (stable seeds)
+      const fbs = [
+        `https://picsum.photos/seed/${encodeURIComponent(slug+'-1')}/1200/900`,
+        `https://picsum.photos/seed/${encodeURIComponent(slug+'-2')}/1200/900`,
+        `https://picsum.photos/seed/${encodeURIComponent(slug+'-3')}/1200/900`
+      ];
+      return locals.map((src, i) => ({ src, fb: fbs[i] }));
+    }
+
+    const grid = document.getElementById('grid');
+    const ggrid = document.getElementById('ggrid');
+    const searchInput = document.getElementById('search');
+    const clearBtn = document.getElementById('clearSearch');
+
+    let FIRE_VENDORS = []; // Firestore’dan gelenler
+    let FILTER = 'ALL';
+    let FAVORITES = new Set(JSON.parse(localStorage.getItem('ws_favs')||'[]'));
+    let CURRENT_VENDOR = null; 
+
+    // Galeri: yerel 1..12.jpg; yoksa rastgele placeholder (picsum)
+    async function loadGallery(){
+      const titleEl = document.querySelector('.gallery .gtitle');
+      if (titleEl) titleEl.textContent = 'Galeri';
+      const files = Array.from({length: 12}, (_, i) => ({
+        local: `img/gallery/${i+1}.jpg`,
+        fallback: `https://picsum.photos/seed/gal-${i+1}/800/800`
+      }));
+      ggrid.innerHTML = files.map(f => `
+        <img class="thumb reveal" src="${f.local}" alt="galeri" loading="lazy"
+             onerror="this.onerror=null; this.src='${f.fallback}'" />
+      `).join('');
+    }
+
+    function card(v){
+      const favOn = FAVORITES.has(v.id||v.name);
+      const photos = vendorPhotos(v);
+      const thumbs = photos.map((p,i)=>
+        `<img class="mini-thumb" data-vid="${v.id||v.name}" data-idx="${i}" src="${p.src}" alt="${(v.name||'')+' foto '+(i+1)}" onerror="this.onerror=null; this.src='${p.fb}'" />`
+      ).join('');
+
+      return `
+        <div class="card reveal">
+          <span class="badge">${VENDOR_CATS[v.cat]||v.cat}</span>
+          <img class="img" src="${v.img || randomImg(v.id||v.name)}" alt="${v.name}" loading="lazy"
+               onerror="this.onerror=null; this.src='${randomImg('${v.id||v.name}')}';" />
+          <div class="body">
+            <div class="name">${v.name}</div>
+            <div class="meta">${v.city?`<span>${v.city}</span>`:''}<span>⭐ ${v.rating||5}</span><span class="stars">${stars(v.rating)}</span></div>
+            <div class="mini-gal">${thumbs}</div>
+            <div class="cta">
+              <button class="btn big" data-book="${v.id||''}"> %20 İndirimle Randevu Al</button>
+              <button class="fav" data-fav="${v.id||v.name}">${favOn?'★ Favori':'☆ Favori'}</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function applyFilters(list){
+      const q = (searchInput.value||'').toLowerCase();
+      let items = (FILTER==='ALL') ? list : list.filter(x => x.cat===FILTER);
+      if (q) items = items.filter(x => `${x.name} ${x.city||''} ${x.cat}`.toLowerCase().includes(q));
+      return items;
+    }
+
+    function render(list){
+      const items = applyFilters(list);
+      grid.innerHTML = items.map(card).join('');
+      // bind buttons
+      grid.querySelectorAll('[data-book]').forEach(btn=>btn.addEventListener('click',()=>openModal(btn.getAttribute('data-book'))));
+      grid.querySelectorAll('[data-fav]').forEach(btn=>btn.addEventListener('click',()=>toggleFav(btn.getAttribute('data-fav'))));
+      // bind per-vendor thumbnail clicks
+      grid.querySelectorAll('.mini-thumb').forEach(img => {
+        img.addEventListener('click', (e)=>{
+          const vid = img.getAttribute('data-vid');
+          const idx = parseInt(img.getAttribute('data-idx')||'0', 10);
+          const base = (FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS);
+          const vendor = base.find(x => (x.id===vid) || (!x.id && (x.name===vid)) );
+          if (vendor) openPhotoModal(vendor, idx);
+        });
+      });
+    }
+
+    function toggleFav(id){
+      if (FAVORITES.has(id)) FAVORITES.delete(id); else FAVORITES.add(id);
+      localStorage.setItem('ws_favs', JSON.stringify(Array.from(FAVORITES)));
+      const base = (FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS); render(base);
+    }
+
+    // --- Modal
+    const modal = document.getElementById('bookingModal');
+    const bkVendor = document.getElementById('bkVendor');
+    document.getElementById('bkCancel').onclick = ()=> modal.style.display='none';
+    document.getElementById('bkSubmit').onclick = createAppointment;
+
+    function openModal(vendorId){
+      const base = (FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS);
+      const v = base.find(x => (x.id===vendorId) || (!x.id && (x.name===vendorId)) ) || base[0];
+      CURRENT_VENDOR = v; bkVendor.textContent = `${v.name} — ${VENDOR_CATS[v.cat]||v.cat}`; modal.style.display='flex';
+    }
+
+    async function createAppointment(){
+      try{
+        if (!WID || !CURRENT_VENDOR) return alert('Önce bir hizmet seçin.');
+        const date = document.getElementById('bkDate').value;
+        const time = document.getElementById('bkTime').value;
+        const phone= document.getElementById('bkPhone').value;
+        const note = document.getElementById('bkNote').value;
+        if (!date || !time) return alert('Tarih ve saat zorunludur.');
+        await db.collection('appointments').add({
+          weddingId: WID,
+          vendorId: CURRENT_VENDOR.id || null,
+          vendorName: CURRENT_VENDOR.name,
+          category: CURRENT_VENDOR.cat,
+          date, time, phone, note,
+          createdAt: (firebase.firestore && firebase.firestore.FieldValue) ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
+        });
+        modal.style.display='none';
+        alert('Randevu oluşturuldu.');
+      }catch(err){
+        console.error('createAppointment error:', err);
+        alert('Randevu oluşturulamadı: '+ (err.code||err.name) + '\n' + err.message);
+      }
+    }
+
+    // --- Photo modal logic
+    const pm = document.getElementById('photoModal');
+    const pmImg = document.getElementById('pmImg');
+    const pmPrev = document.getElementById('pmPrev');
+    const pmNext = document.getElementById('pmNext');
+    const pmClose = document.getElementById('pmClose');
+    const pmOpenRaw = document.getElementById('pmOpenRaw');
+    let PM_LIST = []; let PM_IDX = 0;
+
+    function openPhotoModal(vendor, startIdx){
+      PM_LIST = vendorPhotos(vendor);
+      PM_IDX = Math.max(0, Math.min(startIdx||0, PM_LIST.length-1));
+      showPm(); pm.style.display='flex';
+    }
+    function showPm(){
+      const item = PM_LIST[PM_IDX] || PM_LIST[0];
+      pmImg.src = item.src;
+      pmImg.onerror = ()=>{ pmImg.onerror=null; pmImg.src = item.fb; };
+      if (pmOpenRaw) { pmOpenRaw.href = pmImg.src; }
+    }
+    function closePhotoModal(){ pm.style.display='none'; }
+    function prevPhoto(){ PM_IDX = (PM_IDX-1+PM_LIST.length)%PM_LIST.length; showPm(); }
+    function nextPhoto(){ PM_IDX = (PM_IDX+1)%PM_LIST.length; showPm(); }
+
+    pmPrev && pmPrev.addEventListener('click', prevPhoto);
+    pmNext && pmNext.addEventListener('click', nextPhoto);
+    pmClose && pmClose.addEventListener('click', closePhotoModal);
+    pm && pm.addEventListener('click', (e)=>{ if(e.target===pm) closePhotoModal(); });
+    window.addEventListener('keydown', (e)=>{ if(pm.style.display==='flex'){ if(e.key==='Escape') closePhotoModal(); if(e.key==='ArrowLeft') prevPhoto(); if(e.key==='ArrowRight') nextPhoto(); }});
+
+    function staticVendors(){
+      return [
+        {id:'m7', name:'Mustafa Revan',              cat:'MAKYAJ',        rating:5, city:'Ankara', img:'img/gallery/mustafa1.jpg'},
+        {id:'m10', name:'Makyajhane',              cat:'MAKYAJ',        rating:5, city:'Ankara', img:'img/gallery/makyajhane1.jpg'},
+        {id:'m8', name:'HasanSoley',              cat:'MAKYAJ',        rating:5, city:'Ankara', img:'img/gallery/hasansoley1.jpg'},
+        {id:'m6', name:'Mustafa Demiralp',          cat:'MAKYAJ',        rating:5, city:'Ankara', img:'img/gallery/mustafa2.jpg'},
+        {id:'m5', name:'Made Studio',       cat:'MAKYAJ',      rating:4.9, city:'Ankara', img:'img/gallery/made1.jpg'},
+        {id:'m4', name:'Lunedi',            cat:'MAKYAJ',      rating:4.6, city:'Ankara', img:'img/gallery/lunedi1.jpg'},
+        {id:'m4', name:'Studio Glow(Neslihan Durmaz)',              cat:'MAKYAJ',        rating:4.8, city:'Ankara', img:'img/gallery/glow1.jpg'},
+        {id:'m3', name:'Charmhairmakeup',  cat:'MAKYAJ',  rating:4.7, city:'Ankara', img:'img/gallery/charm1.jpg'},
+        {id:'m2', name:'eminecabukstudio',  cat:'MAKYAJ',  rating:4.7, city:'Ankara', img:'img/gallery/eminecabuk1.jpg'},
+        {id:'m9', name:'İlkinOzcan',          cat:'MAKYAJ',        rating:5, city:'Ankara', img:'img/gallery/mustafa2.jpg'},
+        {id:'m1', name:'Ozcanzincirlistudio',  cat:'MAKYAJ',  rating:4.7, city:'Ankara', img:'img/gallery/ozcan1.jpg'},
+        {id:'o1', name:'Sezar Sak',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/sezarsak1.jpg'},
+        {id:'o2', name:'Evrim Memili',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/evrim1.jpg'},
+        {id:'o3', name:'SAK ORGANİZASYON',  cat:'ORGANIZASYON',  rating:5, city:'Ankara', img:'img/gallery/sak1.jpg'},
+        {id:'o4', name:'SAK MUSİC',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/sak1.jpg'},
+        {id:'o5', name:'SevkanAydin',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/sevkan1.jpg'},
+        {id:'o5', name:'AnkaraOrganizasyon',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/ank1.jpg'},
+        {id:'o5', name:'A46Organizasyon',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/duguncraft1.jpg'},
+        {id:'o5', name:'cbdesigningflower',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/cb1.jpg'},
+        {id:'o6', name:'Celebridaevent',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/celeb1.jpg'},
+        {id:'o7', name:'EsseOrganizasyon',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/esse1.jpg'},
+        {id:'o11', name:'Creaorganizasyon',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/creaorg1.jpg'},
+        {id:'o12', name:'TaluOrganizasyon',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/talu1.jpg'},
+        {id:'o13', name:'FineCatering',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/kaanuzun1.jpg'},
+        {id:'o14', name:'Avenue',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/avenue1.jpg'},
+        {id:'o15', name:'MagicEvents',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/magicev1.jpg'},
+        {id:'o10',name:'SNS ORGANİZASYON',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/sns1.jpg'},
+        {id:'o16', name:'ByMustafaTurkiye',  cat:'ORGANIZASYON',  rating:4.7, city:'Ankara', img:'img/gallery/bymustafa1.jpg'},
+        {id:'f1', name:'Photobooth',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/photobooth1.jpg'},
+        {id:'f2', name:'Orkutvpa',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/orkuvpa1.jpg'},
+        {id:'f3', name:'KaanUzun',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/kaanuzun1.jpg'},
+        {id:'f15', name:'StudyoMod',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/studyomod1.jpg'},
+        {id:'f4', name:'DugunOykusu',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/dugunoykusu1.jpg'},
+        {id:'f5', name:'EnGuzelHikayeniz',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/duguncraft1.jpg'},
+        {id:'f6', name:'LovetellersOfficial',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/lovetellers1.jpg'},
+        {id:'f7', name:'ŞenolAtik',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/atik1.jpg'},
+        {id:'f8', name:'HakanGuloksuz',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/kaanuzun1.jpg'},
+        {id:'f9', name:'Lamourwed',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/.jpg'},
+        {id:'f11', name:'Sevenwedding',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/sw1.jpg'},
+        {id:'f12', name:'EnesBilalOzsari',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/sw1.jpg'},
+        {id:'f13', name:'Anılİyiis',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/sw1.jpg'},
+        {id:'f14', name:'WikiWed',  cat:'FOTOGRAF',  rating:4.7, city:'Ankara', img:'img/gallery/sw1.jpg'},
+        {id:'ga1', name:'KubraPakDesigning',           cat:'GELİNLİK VE AKSESUAR',  rating:4.9, city:'İstanbul', img:'img/gallery/gelinlik1.jpg'},
+        {id:'ga2', name:'JasmineGelinlikSmokin',      cat:'GELİNLİK VE AKSESUAR',  rating:4.8, city:'Ankara',   img:'img/gallery/lunabridal1.jpg'},
+        {id:'ga3', name:'Gaonbridal',          cat:'GELİNLİK VE AKSESUAR',  rating:4.7, city:'İzmir',    img:'img/gallery/aksesuar1.jpg'},
+        {id:'ga4', name:'Lagraziawedding',       cat:'GELİNLİK VE AKSESUAR',  rating:4.8, city:'Bursa',    img:'img/gallery/whiterose1.jpg'},
+        {id:'ga5', name:'Novabella',         cat:'GELİNLİK VE AKSESUAR',  rating:4.6, city:'Antalya',  img:'img/gallery/pearl1.jpg'},
+        {id:'ga6', name:'MaydaGelinlik',         cat:'GELİNLİK VE AKSESUAR',  rating:4.6, city:'Antalya',  img:'img/gallery/pearl1.jpg'},
+        {id:'ga7', name:'Alfabetaevening',         cat:'GELİNLİK VE AKSESUAR',  rating:4.6, city:'Antalya',  img:'img/gallery/pearl1.jpg'},
+        {id:'ga8', name:'studiorain',         cat:'GELİNLİK VE AKSESUAR',  rating:4.6, city:'Antalya',  img:'img/gallery/pearl1.jpg'},
+    
+      ];
+    }
+    const STATIC_VENDORS = staticVendors();
+
+    async function loadVendors(){
+      if (!WID){ render(STATIC_VENDORS); await loadGallery(); return; }
+      try{
+        const snap = await db.collection('vendors').where('weddingId','==', WID).orderBy('rating','desc').limit(60).get();
+        FIRE_VENDORS = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        render(FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS);
+      }catch(e){ console.error('vendors load error',e); render(STATIC_VENDORS); }
+      await loadGallery();
+    }
+
+    // --- Filters / search
+    document.querySelectorAll('[data-filter]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.chip').forEach(c=>c.classList.remove('primary'));
+        btn.classList.add('primary');
+        FILTER = btn.getAttribute('data-filter');
+        const base = (FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS); render(base);
+      });
+    });
+    searchInput.addEventListener('input',()=>{ const base=(FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS); render(base); });
+    clearBtn.addEventListener('click',()=>{ searchInput.value=''; const base=(FIRE_VENDORS.length?FIRE_VENDORS:STATIC_VENDORS); render(base); });
+
+    // --- boot
+    (async ()=>{ await loadVendors(); })();
+  </script>
+</body>
+</html>

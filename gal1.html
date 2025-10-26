@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>DugunSepeti — Galeri</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://picsum.photos" crossorigin>
+  <style>
+   
+    :root{
+      --gap: 14px;
+    }
+    .ws-nav{position:sticky; top:0; z-index:20; backdrop-filter:saturate(140%) blur(8px)}
+    .ws-nav .logo{display:flex; align-items:center; gap:8px; font-weight:800}
+    .ws-nav .logo-badge{width:10px; height:10px; border-radius:50%; display:inline-block; background:linear-gradient(90deg, var(--brand), var(--brand-2)); box-shadow:0 0 10px rgba(139,92,246,.8)}
+
+    .hero-compact{padding:22px 0 8px}
+    .hero-compact h1{font-size:28px; margin:0}
+    .hero-compact p{margin:6px 0 0; opacity:.8}
+
+    .gallery{margin:18px auto}
+    .gallery .gtitle{font-weight:800; font-size:18px; margin:0 0 12px; opacity:.9}
+
+    .gallery-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:var(--gap)}
+    .thumb{width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:14px; display:block; transition:transform .25s ease, box-shadow .25s ease}
+    .thumb:hover{transform:translateY(-2px) scale(1.01); box-shadow:0 18px 50px rgba(0,0,0,.45)}
+
+    /* Skeleton placeholder + lazy styles */
+    .thumb-wrap{position:relative; overflow:hidden; border-radius:14px; background:linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.02), rgba(255,255,255,.06)); background-size:200% 100%; animation:shimmer 1.2s linear infinite}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .thumb-wrap img{display:block; width:100%; height:100%; object-fit:cover; aspect-ratio:4/3}
+    .thumb-wrap.loaded{animation:none; background:transparent}
+    .thumb{transition:transform .25s ease, box-shadow .25s ease;}
+    .thumb-wrap.loaded .thumb{filter:none}
+
+    /* Görünürlüğü garanti altına al */
+    .gallery img.thumb{opacity:1 !important;}
+    @supports not (aspect-ratio: 1 / 1){
+      .gallery img.thumb{height:220px;}
+    }
+    .gallery-grid{position:relative; z-index:1}
+
+    /* Lightbox */
+    .lightbox{position:fixed; inset:0; background:rgba(10,15,25,.85); display:none; align-items:center; justify-content:center; z-index:40}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:92vw; max-height:86vh; border-radius:12px; box-shadow:0 30px 90px rgba(0,0,0,.65)}
+    .lb-controls{position:absolute; inset:auto 0 24px 0; display:flex; gap:10px; justify-content:center}
+    .lb-btn{background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#e5e7eb; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+    .lb-btn:hover{background:rgba(255,255,255,.14)}
+    .lb-close{position:absolute; top:16px; right:16px}
+
+    
+    body.soft .thumb:hover{transform:none; box-shadow:none}
+
+    /* Sky layer her zaman arkada kalsın */
+    .sky{position:fixed; inset:0; z-index:-1; pointer-events:none}
+
+    /* Galeri görünürlük düzeltmeleri */
+    .gallery-grid{min-height:200px}
+    .thumb{opacity:1; transition:opacity .25s ease, transform .25s ease, box-shadow .25s ease}
+  </style>
+</head>
+<body>
+  
+  <div class="sky"></div>
+
+  <nav class="ws-nav">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0">
+      <div class="logo"><span class="logo-badge"></span> DugunSepeti</div>
+      <div class="cta">
+        <a href="landing.html"><button>Landing</button></a>
+        <a href="vendors.html"><button>Hizmetler</button></a>
+        <a href="index.html?wedding=demo-dugun"><button class="glow">RSVP</button></a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="container hero-compact">
+    <h1>Galeri</h1>
+    <p>Öne çıkan kareler ve ilham panosu.</p>
+  </header>
+
+  <main class="container">
+    <section class="card gallery">
+      <div class="gtitle">Galeri</div>
+      <div id="ggrid" class="gallery-grid"></div>
+    </section>
+  </main>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-label="Galeri Görüntüleyici">
+    <button class="lb-btn lb-close" id="lbClose">Kapat ✕</button>
+    <button class="lb-btn" id="lbPrev" style="position:absolute; left:16px;">⟨</button>
+    <img id="lbImg" src="" alt="büyük görsel" />
+    <button class="lb-btn" id="lbNext" style="position:absolute; right:16px;">⟩</button>
+    <div class="lb-controls">
+      <button class="lb-btn" id="lbDownload">Görseli İndir</button>
+      <button class="lb-btn" id="lbShare">Paylaş</button>
+    </div>
+  </div>
+
+  <footer class="footer">© 2025 DugunSepeti. Tüm hakları saklıdır.</footer>
+
+  <script>
+    // Galeri kaynakları — şimdilik yerel img gallery içinde tutuluyo ama sonra firestore aktarılabilir  1..12.jpg; yoksa picsumdan al fotoları
+    const GALLERY_COUNT = 12;
+    // Önce yerel dosyayı dene: img/gallery/galleryx1.jpg ... galleryx12.jpg
+    const galleryList = Array.from({length: GALLERY_COUNT}, (_,i)=> ({
+      src: `img/gallery/galleryx${i+1}.jpg`,
+      fallback: `https://picsum.photos/seed/galleryx-fb${i+1}/1200/900`
+    }));
+
+    const grid = document.getElementById('ggrid');
+    const lb   = document.getElementById('lightbox');
+    const lbImg= document.getElementById('lbImg');
+    const lbPrev=document.getElementById('lbPrev');
+    const lbNext=document.getElementById('lbNext');
+    const lbClose=document.getElementById('lbClose');
+    const lbDownload=document.getElementById('lbDownload');
+    const lbShare=document.getElementById('lbShare');
+
+    let current = 0;
+
+    function renderGallery(){
+      // Build skeleton wrappers with lazy images
+      const tiny = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 3%22%3E%3Crect width=%224%22 height=%223%22 fill=%22%23151a2a%22/%3E%3C/svg%3E';
+      grid.innerHTML = galleryList.map((g,idx)=> `
+        <div class="thumb-wrap" data-idx="${idx}" onclick="openLB(${idx})">
+          <img class="thumb lazy" alt="galeri" src="${tiny}" data-src="${g.src}" data-fallback="${g.fallback}" decoding="async" loading="lazy"/>
+        </div>
+      `).join('');
+
+      const opts = { root:null, rootMargin: '200px 0px', threshold: 0.01 };
+      const io = ('IntersectionObserver' in window) ? new IntersectionObserver(onIntersect, opts) : null;
+      const nodes = grid.querySelectorAll('img.lazy');
+      nodes.forEach(img => io ? io.observe(img) : loadImg(img));
+
+      function onIntersect(entries){
+        entries.forEach(entry=>{ if(entry.isIntersecting){ io.unobserve(entry.target); loadImg(entry.target); } });
+      }
+      function loadImg(img){
+        const full = img.getAttribute('data-src');
+        const fb   = img.getAttribute('data-fallback');
+        const wrap = img.parentElement;
+        const done = ()=>{ wrap && wrap.classList.add('loaded'); };
+        img.onerror = ()=>{ if(img.src !== fb){ img.src = fb; } done(); };
+        img.onload = ()=>{ if(!img.naturalWidth || !img.naturalHeight){ img.src = fb; } done(); };
+        img.src = full; // trigger load
+      }
+      console.log('Gallery (lazy) rendered', {count: galleryList.length});
+    }
+
+    function openLB(i){
+      current = i;
+      const node = grid.querySelector(`.thumb-wrap[data-idx="${i}"] img`);
+      const item = galleryList[current];
+      const src = node && node.currentSrc ? node.currentSrc : (node && node.src ? node.src : item.src);
+      lbImg.src = src;
+      lbImg.onerror = ()=>{ lbImg.onerror=null; lbImg.src = item.fallback; };
+      lb.classList.add('open');
+    }
+    function closeLB(){ lb.classList.remove('open'); }
+    function prev(){ current = (current-1+galleryList.length)%galleryList.length; openLB(current); }
+    function next(){ current = (current+1)%galleryList.length; openLB(current); }
+
+    lbPrev.addEventListener('click', prev);
+    lbNext.addEventListener('click', next);
+    lbClose.addEventListener('click', closeLB);
+    lb.addEventListener('click', e=>{ if(e.target===lb) closeLB(); });
+    window.addEventListener('keydown', e=>{
+      if(!lb.classList.contains('open')) return;
+      if(e.key==='Escape') closeLB();
+      if(e.key==='ArrowLeft') prev();
+      if(e.key==='ArrowRight') next();
+    });
+
+    lbDownload.addEventListener('click', ()=>{
+      const a=document.createElement('a');
+      const item = galleryList[current];
+      a.href = lbImg.src || item.src; a.download = 'galeri.jpg'; a.click();
+    });
+
+    lbShare.addEventListener('click', async ()=>{
+      const item = galleryList[current];
+      const url = lbImg.src || item.src;
+      if(navigator.share){
+        try{ await navigator.share({ title:'DugunSepeti Galeri', url }); }catch{}
+      }else{
+        try{ await navigator.clipboard.writeText(url); alert('Görsel bağlantısı kopyalandı'); }catch{ alert('Paylaşım desteklenmiyor'); }
+      }
+    });
+
+    // Başlat
+    renderGallery();
+  </script>
+</body>
+</html>
