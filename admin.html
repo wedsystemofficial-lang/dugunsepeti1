@@ -341,28 +341,6 @@
         </div>
       </div>
     </div> 
-
-    <!-- REHBERDEN SEÇ & LİNK GÖNDER -->
-    <div id="selectSendCard" class="card reveal" data-requires-auth style="margin:18px auto; max-width:860px; display:none;">
-      <h2 style="margin:0 0 8px">📤 Link Gönder (Rehberden Seç)</h2>
-      <p class="muted" style="margin:0 0 12px">Rehberden içe aldığın kişiler burada listelenir. Göndermek istediklerini işaretle.</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px">
-        <button id="selectAllSend">Tümünü Seç</button>
-        <button id="selectNoneSend">Seçimi Temizle</button>
-        <select id="sendChannel" style="background:rgba(15,23,42,.6); color:#eef2ff; border:1px solid rgba(148,163,184,.22); border-radius:10px; padding:8px 10px">
-          <option value="auto">Otomatik (Önerilen)</option>
-          <option value="share">Cihaz Paylaş (Web Share)</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="copy">Sadece Kopyala</option>
-        </select>
-        <button id="sendSelected" class="primary">Seçilenlere Gönder</button>
-        <button id="copySelectedLinks" class="">Seçilen Linkleri Kopyala</button>
-        <button id="waComposeSelected">WhatsApp Mesajı Oluştur</button>
-        <span id="selCount" class="muted" style="margin-left:auto">Seçili: 0</span>
-      </div>
-      <div id="sendList" style="overflow:auto; border-radius:12px; border:1px solid rgba(148,163,184,.18)"></div>
-    </div>
-  </div>
   <div id="toast" role="status" aria-live="polite"></div>
   <footer class="footer">© 2025 WedSystem — Admin</footer>
   <script>
