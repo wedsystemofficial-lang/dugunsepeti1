@@ -364,70 +364,39 @@ function boot(){
 
   renderWeddingListFirebase();
 
-  // === Rehberden Seç & Gönder ===
-  const pickBtn = document.getElementById('pickContactsBtn');
-  const waBtn   = document.getElementById('waSendSelected');
-  const smsBtn  = document.getElementById('smsSelected');
+  // === WhatsApp Davet (rehbersiz, tek link) ===
+  const waInviteBtn   = document.getElementById('waInviteBtn');
+  const copyInviteBtn = document.getElementById('copyInviteBtn');
 
-  async function pickContacts(){
-    if (!(navigator.contacts && navigator.contacts.select)) {
-      alert('Tarayıcı telefon rehberine erişimi desteklemiyor. Telefon tarayıcısı kullanın.');
-      return;
-    }
-    try {
-      const props = ['name','tel'];
-      const opts = { multiple: true };
-      const contacts = await navigator.contacts.select(props, opts);
-      if (!contacts.length) return alert('Hiç kişi seçilmedi.');
-      localStorage.setItem('selectedContacts', JSON.stringify(contacts));
-      alert(`${contacts.length} kişi eklendi.`);
-    } catch(err){
-      console.error('Rehber seçimi hatası', err);
-      alert('Rehber erişimi reddedildi veya hata oluştu.');
-    }
+  function baseInvite(){
+    const p = window.location.pathname;
+    return /\/admin\.html$/.test(p)
+      ? window.location.origin + p.replace(/\/admin\.html$/, '/index.html')
+      : window.location.origin + '/index.html';
   }
-
-  function buildInviteLink(weddingId, name, phone){
-    const base = window.location.origin + (window.location.pathname.replace(/\/admin\.html$/, '/index.html'));
-    const url = new URL(base);
-    url.searchParams.set('wedding', weddingId);
-    if (name) url.searchParams.set('fn', name);
-    if (phone) url.searchParams.set('ph', phone);
+  function buildInviteLinkOnly(wid){
+    const url = new URL(baseInvite());
+    url.searchParams.set('wedding', wid);
     return url.toString();
   }
-
-  async function sendWhatsApp(){
-    const data = JSON.parse(localStorage.getItem('selectedContacts')||'[]');
-    if (!data.length) return alert('Hiç kişi seçilmedi.');
-    const wid = CURRENT_WEDDING || el('weddingId').value;
-    data.forEach((c, i) => {
-      const name = (c.name && c.name[0]) || '';
-      const phone = (c.tel && c.tel[0]) || '';
-      const link = buildInviteLink(wid, name, phone);
-      const msg = `Merhaba ${name}! Düğün davet linkimiz: ${link}`;
-      const num = phone.replace(/[^0-9]/g, '');
-      const wa = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-      setTimeout(()=> window.open(wa, '_blank'), i*400);
-    });
+  function openWhatsAppGeneric(){
+    const wid = CURRENT_WEDDING || (el('weddingId') && el('weddingId').value) || '';
+    if (!wid){ alert('Önce weddingId ile giriş yapın.'); return; }
+    const link = buildInviteLinkOnly(wid);
+    const msg  = `Düğün davet linkimiz: ${link}`;
+    const wa   = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(wa, '_blank');
+  }
+  async function copyInviteGeneric(){
+    const wid = CURRENT_WEDDING || (el('weddingId') && el('weddingId').value) || '';
+    if (!wid){ alert('Önce weddingId ile giriş yapın.'); return; }
+    const link = buildInviteLinkOnly(wid);
+    try{ await navigator.clipboard.writeText(link); alert('Davet linki kopyalandı.'); }
+    catch{ prompt('Linki kopyalayın:', link); }
   }
 
-  async function sendSMS(){
-    const data = JSON.parse(localStorage.getItem('selectedContacts')||'[]');
-    if (!data.length) return alert('Hiç kişi seçilmedi.');
-    const wid = CURRENT_WEDDING || el('weddingId').value;
-    data.forEach((c, i) => {
-      const name = (c.name && c.name[0]) || '';
-      const phone = (c.tel && c.tel[0]) || '';
-      const link = buildInviteLink(wid, name, phone);
-      const msg = `Merhaba ${name}! Düğün davet linkimiz: ${link}`;
-      const sms = `sms:${phone}?body=${encodeURIComponent(msg)}`;
-      setTimeout(()=> window.open(sms, '_blank'), i*400);
-    });
-  }
-
-  if (pickBtn) pickBtn.addEventListener('click', pickContacts);
-  if (waBtn)   waBtn.addEventListener('click', sendWhatsApp);
-  if (smsBtn)  smsBtn.addEventListener('click', sendSMS);
+  if (waInviteBtn)   waInviteBtn.addEventListener('click', openWhatsAppGeneric);
+  if (copyInviteBtn) copyInviteBtn.addEventListener('click', copyInviteGeneric);
 }
 document.addEventListener('DOMContentLoaded', boot);
 
