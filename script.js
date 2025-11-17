@@ -1,4 +1,70 @@
-// Form ve Firestore entegrasyonu
+// === Firestore Koleksiyonlarını Otomatik Başlat (index tarafı) ===
+(function ensureFirestoreCollections(){
+  function waitForDb(){
+    return new Promise((resolve) => {
+      (function poll(){
+        if (window.db || (window.firebase && window.firebase.firestore)) return resolve();
+        setTimeout(poll, 300);
+      })();
+    });
+  }
+
+  (async function run(){
+    try{
+      await waitForDb();
+      const db = window.db || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      if (!db) return;
+      const fv = (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) || null;
+      const needed = ['weddings','rsvp','menus','seating'];
+      for (const col of needed){
+        try {
+          const snap = await db.collection(col).limit(1).get();
+          if (snap.empty){
+            await db.collection(col).doc('_init').set({
+              system: true,
+              createdAt: fv ? fv.serverTimestamp() : new Date(),
+              note: 'Otomatik oluşturuldu (index)'
+            });
+            console.log(`[Firestore] '${col}' koleksiyonu oluşturuldu (index).`);
+          } else {
+            console.log(`[Firestore] '${col}' mevcut (index).`);
+          }
+        } catch(err){
+          console.warn('Koleksiyon kontrol hatası (index):', col, err);
+        }
+      }
+    } catch(e){
+      console.error('ensureFirestoreCollections hata:', e);
+    }
+  })();
+})();
+
+function __setBusy(selectorOrEl, busy){
+  try{
+    const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
+    if (!el) return;
+    if (busy){
+      el.setAttribute('aria-busy','true');
+      el.classList.add('skeleton');
+    } else {
+      el.removeAttribute('aria-busy');
+      el.classList.remove('skeleton');
+    }
+  }catch(_){}
+}
+function setFormBusy(formEl, on){
+  try{
+    if (!formEl) return;
+    const btn = formEl.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = !!on;
+    if (window.wsSetLoading){
+      window.wsSetLoading('#rsvpForm .card', !!on);
+    } else {
+      __setBusy(formEl, !!on);
+    }
+  }catch(_){}
+}
+
 let __dbRef = null;
 function getDb(){
   if (__dbRef) return __dbRef;
@@ -42,41 +108,70 @@ const formEl = document.getElementById('rsvpForm');
 if (!formEl) {
   // Bu sayfada form yoksa (ör. landing/admin), hata vermeden çık
   console.info('RSVP formu bu sayfada bulunamadı.');
-} else formEl.addEventListener('submit', async (e) => {
+} else if (!formEl.dataset.bound) { formEl.dataset.bound = '1'; formEl.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
+  setFormBusy(formEl, true);
 
   const firstName  = $('#firstName').value.trim();
   const lastName   = $('#lastName').value.trim();
   const phone      = normalizePhone($('#phone').value);
-  const guestCount = Number($('#guestCount').value);
+  const adultCountEl = document.getElementById('adultCount');
+  const childCountEl = document.getElementById('childCount');
+  const adultCount = Math.max(1, parseInt((adultCountEl && adultCountEl.value) || '1', 10));
+  const childCount = Math.max(0, parseInt((childCountEl && childCountEl.value) || '0', 10));
+  const guestCount = adultCount + childCount; // toplam, geriye dönük uyumluluk
   const attendance = (document.querySelector('input[name="attendance"]:checked') || {}).value;
+  const menuChoice = document.querySelector('input[name="menuChoice"]:checked')?.value || '';
 
-  if (!firstName || !lastName || !phone || !guestCount || !attendance) {
+  if (!firstName || !lastName || !phone || !attendance) {
     alert('Lütfen tüm alanları doldurun ve katılım durumunu seçin.');
+    setFormBusy(formEl, false);
     return;
   }
-  if (guestCount < 1) {
-    alert('Kişi sayısı en az 1 olmalıdır.');
+  if (!Number.isFinite(adultCount) || adultCount < 1) {
+    alert('Yetişkin sayısı en az 1 olmalıdır.');
+    setFormBusy(formEl, false);
     return;
   }
-  if (submitBtn) submitBtn.disabled = true;
-  if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', true);
+  if (!Number.isFinite(childCount) || childCount < 0) {
+    alert('Çocuk sayısı 0 veya üzeri olmalıdır.');
+    setFormBusy(formEl, false);
+    return;
+  }
+  if (!menuChoice) {
+    alert('Lütfen bir menü seçin.');
+    setFormBusy(formEl, false);
+    return;
+  }
 
   if (!weddingId) {
     alert('Bu form özel düğün linki olmadan gönderilemez. Lütfen düğün sahibinin gönderdiği linki kullanın.');
-    if (submitBtn) submitBtn.disabled = false;
-    if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
+    setFormBusy(formEl, false);
     return;
+  }
+
+  // UI: Onayı hemen göster (bekletme yok)
+  const confirmEl_imm = document.getElementById('confirmation');
+  if (confirmEl_imm) {
+    confirmEl_imm.classList.remove('hidden');
+    confirmEl_imm.classList.add('show');
+    const btn = document.getElementById('closeConfirm');
+    if (btn) {
+      btn.onclick = () => {
+        confirmEl_imm.classList.remove('show');
+        setTimeout(() => confirmEl_imm.classList.add('hidden'), 200);
+      };
+    }
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   }
 
   try {
     const db = getDb();
     if (!db) {
       alert('Veritabanı başlatılamadı. Lütfen Firebase scriptlerinin yüklü olduğundan emin olun.');
-      if (submitBtn) submitBtn.disabled = false;
-      if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
+      setFormBusy(formEl, false);
       return;
     }
     // Basit mükerrer kontrol (wedding + phone)
@@ -89,79 +184,43 @@ if (!formEl) {
 
     if (!existingSnap.empty) {
       alert('Bu telefon ile zaten bir kayıt mevcut.');
-      if (submitBtn) submitBtn.disabled = false;
-      if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
+      setFormBusy(formEl, false);
       return;
     }
 
-    await db.collection('rsvp').add({
+    const addPromise = db.collection('rsvp').add({
       weddingId,
       firstName,
       lastName,
       phone,
       attendance,
-      guestCount,
+      adultCount: adultCount,
+      childCount: childCount,
+      guestCount: guestCount, // toplam
+      menuChoice: menuChoice,
       createdAt: (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue)
         ? window.firebase.firestore.FieldValue.serverTimestamp()
         : new Date()
     });
+    const timeoutPromise = new Promise((_, rej)=> setTimeout(()=> rej(new Error('İstek zaman aşımına uğradı (10sn).')), 10000));
+    const docRef = await Promise.race([addPromise, timeoutPromise]);
 
-    e.target.reset();
-
-    if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
-    if (submitBtn) submitBtn.disabled = false;
-
-    const confirmEl = document.getElementById('confirmation');
-    if (confirmEl) {
-      confirmEl.classList.remove('hidden');
-      confirmEl.classList.add('show');
-      const cdEl = document.getElementById('countdown');
-      let left = 5;
-      if (cdEl) cdEl.textContent = String(left);
-
-      const hideConfirm = () => {
-        confirmEl.classList.remove('show');
-        setTimeout(() => confirmEl.classList.add('hidden'), 200);
-      };
-
-      const timer = setInterval(() => {
-        left -= 1;
-        if (cdEl) cdEl.textContent = String(left);
-        if (left <= 0) {
-          clearInterval(timer);
-          hideConfirm();
-        }
-      }, 1000);
-
-      const btn = document.getElementById('closeConfirm');
-      if (btn) {
-        btn.onclick = () => {
-          clearInterval(timer);
-          hideConfirm();
-        };
-      }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      await db.collection('menus').add({
+        weddingId,
+        firstName,
+        lastName,
+        menuChoice,
+        createdAt: (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue)
+          ? window.firebase.firestore.FieldValue.serverTimestamp()
+          : new Date()
+      });
+    } catch(addErr) {
+      console.warn('menus koleksiyonuna eklenemedi:', addErr);
     }
-    if (window.showToast) showToast('Bilgileriniz kaydedildi');
-    else alert('Bilgileriniz kaydedildi');
 
-    // Tüm UI state'lerini güvenli şekilde kapat
-    if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
-    if (submitBtn) submitBtn.disabled = false;
-
-    // Onay kutusunu kısa bir gecikmeyle gizle
-    setTimeout(() => {
-      const confirmEl2 = document.getElementById('confirmation');
-      if (confirmEl2) {
-        confirmEl2.classList.remove('show');
-        confirmEl2.classList.add('hidden');
-      }
-    }, 300);
-
-    setTimeout(() => {
-      location.href = location.pathname + location.search;
-    }, 3000);
+    try { if (docRef && docRef.id) { window.__RSVP_DOC_ID__ = docRef.id; } } catch(_){}
+    try { formEl.reset(); } catch(_){ }
 
     setTimeout(() => {
       try {
@@ -181,14 +240,14 @@ if (!formEl) {
     alert('Hata Kodu: ' + code + '\nMesaj: ' + msg + '\n' +
           'Eğer kod permission-denied ise Rules/Enforcement ayarlarını kontrol et.\n' +
           'failed-precondition ise konsoldaki Create index linkine tıkla.');
+    setFormBusy(formEl, false);
   } finally {
-    if (submitBtn) submitBtn.disabled = false;
-    if (window.wsSetLoading) wsSetLoading('#rsvpForm .card', false);
-    try {
-      formEl.style.pointerEvents = '';
-      formEl.classList.remove('skeleton');
-      formEl.removeAttribute('aria-busy');
-      e.target.querySelectorAll('button, input, select, textarea').forEach(el=>{ el.disabled = false; });
-    } catch(_) {}
+    setFormBusy(formEl, false);
   }
 });
+
+// ==== Menu selection handlers (disabled — menu now saved with form submit) ====
+(function(){
+  // no-op
+})();
+}

@@ -114,6 +114,13 @@ async function renderWeddingListFirebase(){
 let CURRENT_WEDDING = null;
 let ASSIGN = {}; // guestId -> { table }
 let FILTER = { attendance: 'ALL', q: '' };
+let MENU_UNSUB = null;
+let RSVP_MENU_UNSUB = null;
+
+// Menü listesi için ek durumlar
+let MENU_FILTER = { q: '', choice: 'ALL' }; // choice: ALL|RED|WHITE|VEG|VEGAN|CHILD
+let LAST_MENU_ROWS = []; // en son render edilen ham satırlar
+let _menuSearchDebounce = null;
 
 async function login(){
   try{
@@ -135,7 +142,10 @@ async function login(){
     CURRENT_WEDDING = weddingId;
     localStorage.setItem('ws_admin_wedding', weddingId);
     el('currentWedding').textContent = weddingId;
-    el('panel').style.display = 'block';
+    const panelEl = el('panel');
+    if (panelEl) {
+      panelEl.style.display = 'block';
+    }
 
     // RSVP linkini göster (basit ve uyumlu: ?wedding=...)
     const rsvp = document.getElementById('rsvpLink');
@@ -156,7 +166,7 @@ async function login(){
       };
     }
 
-    // Kişiye özel davet linki üretimi (basit query paramlarla)
+    // Kişiye özel davet linki (opsiyonel isim/telefon parametreleri)
     const buildBtn = document.getElementById('buildPersonalLinkBtn');
     const fullNameInput = document.getElementById('guestFullName');
     const phoneInput = document.getElementById('guestPhoneOpt');
@@ -197,9 +207,20 @@ async function login(){
     await loadGuests();
     await loadSeating();
 
-    // Show Services section in the middle after successful login
+    // === Menü Seçimleri: canlı dinleme + manuel yenile ===
+    ensureMenuSection();
+    ensureMenuControls();
+    startMenuLive();
+    (function bindMenuRefresh(){
+      const lm = document.getElementById('loadMenuBtn');
+      if (lm && !lm.dataset.bound){
+        lm.dataset.bound = '1';
+        lm.onclick = loadMenuSelections;
+      }
+    })();
+
+    // Giriş başarılı olunca Hizmetler bölümü (ortada büyük buton)
     (function ensureServices(){
-      // 1) Create the Services section dynamically if it doesn't exist
       let sec = document.getElementById('servicesSection');
       if (!sec) {
         const panel = document.getElementById('panel');
@@ -207,7 +228,6 @@ async function login(){
         sec = document.createElement('div');
         sec.id = 'servicesSection';
         sec.className = 'card reveal';
-        // sec.setAttribute('data-requires-auth', '');
         sec.style.cssText = 'margin:18px auto; text-align:center; max-width:860px';
         sec.innerHTML = `
           <h2 style="margin:0 0 8px; font-size:28px; letter-spacing:.2px">💼 Hizmetler</h2>
@@ -221,13 +241,10 @@ async function login(){
           wrapper.appendChild(sec);
         }
       }
-
-      // ensure auth-ready state and visibility
       try { document.body.classList.remove('auth-locked'); document.body.classList.add('auth-ready'); } catch(_){}
       try { sec.removeAttribute('data-requires-auth'); } catch(_){}
       if (sec) sec.style.display = 'block';
 
-      // 2) Wire button + fill wedding id and show section
       const btn = document.getElementById('openServicesBtn');
       const wid = document.getElementById('svcWid');
       if (wid) wid.textContent = CURRENT_WEDDING || '-';
@@ -286,41 +303,279 @@ async function loadGuests(){
 
 // === Drag & Drop Seating ===
 function enableDnD(){
-  document.querySelectorAll('.table-slot').forEach(slot => {
-    slot.addEventListener('dragover', e => e.preventDefault());
-    slot.addEventListener('drop', e => {
+  // Aynı dinleyicileri birden fazla kez eklememek için guard
+  if (window._wsDndBound) return;
+  window._wsDndBound = true;
+
+  const root = document;
+
+  // Masa ve havuz hedeflerine dragover izni ver
+  root.addEventListener('dragover', (e) => {
+    const slot = e.target.closest('.table-slot, .table-node, #guestPool');
+    if (slot) {
       e.preventDefault();
-      const guestId = e.dataTransfer.getData('text/plain');
-      if (!guestId) return;
-      const chip = document.querySelector(`.guest-chip[data-id="${guestId}"]`);
-      if (chip) slot.appendChild(chip);
-      ASSIGN[guestId] = { table: slot.dataset.table };
-    });
+    }
   });
-  const pool = el('guestPool');
-  if (pool){
-    pool.addEventListener('dragover', e => e.preventDefault());
-    pool.addEventListener('drop', e => {
-      e.preventDefault();
-      const guestId = e.dataTransfer.getData('text/plain');
-      const chip = document.querySelector(`.guest-chip[data-id="${guestId}"]`);
-      if (chip) pool.appendChild(chip);
+
+  // Drop işlemini yakala (masa veya havuz)
+  root.addEventListener('drop', (e) => {
+    const slot = e.target.closest('.table-slot, .table-node, #guestPool');
+    if (!slot) return;
+    e.preventDefault();
+
+    const guestId = e.dataTransfer.getData('text/plain');
+    if (!guestId) return;
+
+    const chip = document.querySelector(`.guest-chip[data-id="${guestId}"]`);
+    if (!chip) return;
+
+    // Eğer havuza bırakıldıysa masadan çıkar ve chip havuza gider
+    if (slot.id === 'guestPool') {
+      slot.appendChild(chip);
       delete ASSIGN[guestId];
-    });
-  }
+      return;
+    }
+
+    // Masa node'una bırakıldıysa:
+    // data-table yoksa text/id'den üret, SADECE atamayı güncelle
+    if (!slot.dataset.table){
+      const label = (slot.textContent || '').trim() || slot.getAttribute('data-label') || slot.id || '';
+      if (label) slot.dataset.table = label;
+    }
+    const key = slot.dataset.table || (slot.textContent || '').trim();
+    if (!key) return;
+
+    // Chip'i masanın üstüne taşımıyoruz; sadece atamayı tutuyoruz
+    ASSIGN[guestId] = { table: key };
+  });
+
+  // Masa detayı (modal) için tıklama - dinamik masalar dahil
+  root.addEventListener('click', (e) => {
+    const slot = e.target.closest('.table-slot, .table-node');
+    if (!slot) return;
+    const key = slot.dataset.table || (slot.textContent || '').trim() || slot.getAttribute('data-label') || slot.id || '';
+    if (!key) return;
+    openTableDetail(key, slot);
+  });
 }
 
 async function loadSeating(){
   ASSIGN = {};
   const snap = await db.collection('seating').doc(CURRENT_WEDDING).collection('assignments').get();
   snap.forEach(doc => { ASSIGN[doc.id] = doc.data(); });
-  Object.entries(ASSIGN).forEach(([guestId, v]) => {
-    const chip = document.querySelector(`.guest-chip[data-id="${guestId}"]`);
-    const slot = document.querySelector(`.table-slot[data-table="${v.table}"]`);
-    if (chip && slot) slot.appendChild(chip);
+
+  // Masa hedeflerine data-table atanmış olduğundan emin ol
+  const tableTargets = document.querySelectorAll('.table-slot, .table-node');
+  tableTargets.forEach(slot => {
+    if (!slot.dataset.table){
+      const label = (slot.textContent || '').trim() || slot.getAttribute('data-label') || slot.id || '';
+      if (label) slot.dataset.table = label;
+    }
+  });
+
+  // Misafir chip'lerini masaların üstüne taşımıyoruz; atamalar sadece ASSIGN içinde tutuluyor.
+}
+// === MENÜ SEÇİMLERİ ===
+function ensureMenuSection(){
+  return document.getElementById('menuSection');
+}
+
+// ---- Menü özet rozetleri + tablo render ve filtre yardımcıları ----
+function renderMenuStats(rows){
+  const read = id => document.getElementById(id);
+  const norm = s => String(s||'').toLowerCase();
+  const get = (...names) => rows.filter(r => {
+    const x = norm(r.menuChoice);
+    return names.some(n => x === n);
+  }).length;
+  const red   = get('kırmızı et','kirmizi et','kirmizi','red');
+  const white = get('beyaz et','beyaz','white','tavuk','chicken');
+  const veg   = get('vejetaryen','vejeteryan','vegetarian');
+  const vegan = get('vegan');
+  const child = get('çocuk menüsü','cocuk menusu','çocuk','child');
+  const total = rows.length;
+  const put = (id,val)=>{ const el = document.getElementById(id); if (el){ const b = el.querySelector('b'); if (b) b.textContent = String(val); }};
+  put('statRed', red); put('statWhite', white); put('statVeg', veg); put('statVegan', vegan); put('statChild', child); put('statTotal', total);
+}
+
+function _norm(s){ return String(s||'').toLowerCase(); }
+function _matchChoice(choice, text){
+  const t = _norm(text);
+  if (choice === 'ALL') return true;
+  if (choice === 'RED')   return ['kırmızı et','kirmizi et','kirmizi','red'].includes(t);
+  if (choice === 'WHITE') return ['beyaz et','beyaz','white','tavuk','chicken'].includes(t);
+  if (choice === 'VEG')   return ['vejetaryen','vejeteryan','vegetarian'].includes(t);
+  if (choice === 'VEGAN') return ['vegan'].includes(t);
+  if (choice === 'CHILD') return ['çocuk menüsü','cocuk menusu','çocuk','child'].includes(t);
+  return true;
+}
+
+function applyMenuFilter(rows){
+  const q = _norm(MENU_FILTER.q);
+  return rows.filter(r => {
+    const name = _norm(((r.firstName||'')+' '+(r.lastName||''))).trim();
+    const phone= _norm(r.phone||'');
+    const menu = _norm(r.menuChoice||'');
+    const passQ = !q || name.includes(q) || phone.includes(q) || menu.includes(q);
+    const passC = _matchChoice(MENU_FILTER.choice, r.menuChoice);
+    return passQ && passC;
   });
 }
 
+function renderMenuRows(rows){
+  LAST_MENU_ROWS = Array.isArray(rows) ? rows.slice() : [];
+  const tbody = document.querySelector('#menuTable tbody');
+  if (!tbody) return;
+
+  const filtered = applyMenuFilter(LAST_MENU_ROWS);
+  if (!filtered.length){
+    tbody.innerHTML = '<tr><td colspan="3" class="muted">Menü verisi bulunamadı.</td></tr>';
+    renderMenuStats([]);
+    return;
+  }
+  const toTs = (t)=> t && t.toDate ? t.toDate().getTime() : (t? new Date(t).getTime():0);
+  filtered.sort((a,b)=> toTs(b.createdAt||b.menuUpdatedAt) - toTs(a.createdAt||a.menuUpdatedAt));
+  const fmt = (ts) => { try{ if (!ts) return ''; if (ts.toDate) return ts.toDate().toLocaleString('tr-TR'); return new Date(ts).toLocaleString('tr-TR'); }catch{ return ''; } };
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td>${esc(((r.firstName||'') + ' ' + (r.lastName||'')).trim())}</td>
+      <td>${esc(r.menuChoice || '—')}</td>
+      <td>${esc(fmt(r.createdAt || r.menuUpdatedAt))}</td>
+    </tr>
+  `).join('');
+  renderMenuStats(filtered);
+}
+
+async function loadMenuSelections(){
+  if (!CURRENT_WEDDING){ return; }
+  const tbody = document.querySelector('#menuTable tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="muted">Yükleniyor…</td></tr>';
+
+  const fromMenus = [];
+  try{
+    const snap = await db.collection('menus').where('weddingId','==', CURRENT_WEDDING).get();
+    snap.forEach(doc => fromMenus.push({ _id: doc.id, ...doc.data() }));
+  }catch(e){ console.warn('menus read fail', e); }
+
+  if (fromMenus.length){ renderMenuRows(fromMenus); return; }
+
+  const fromRsvp = [];
+  try{
+    const rs = await db.collection('rsvp').where('weddingId','==', CURRENT_WEDDING).get();
+    rs.forEach(doc => { const d = doc.data()||{}; if (d.menuChoice) fromRsvp.push({ _id: doc.id, ...d }); });
+  }catch(e){ console.error('rsvp fallback fail', e); }
+
+  renderMenuRows(fromRsvp);
+}
+
+function startMenuLive(){
+  // varsa eski dinleyicileri kapat
+  if (MENU_UNSUB){ try{ MENU_UNSUB(); }catch{} MENU_UNSUB=null; }
+  if (RSVP_MENU_UNSUB){ try{ RSVP_MENU_UNSUB(); }catch{} RSVP_MENU_UNSUB=null; }
+  if (!CURRENT_WEDDING) return;
+
+  const qMenus = db.collection('menus').where('weddingId','==', CURRENT_WEDDING);
+  MENU_UNSUB = qMenus.onSnapshot(snap => {
+    const rows = [];
+    snap.forEach(doc => rows.push({ _id: doc.id, ...doc.data() }));
+    if (rows.length){
+      renderMenuRows(rows);
+      if (RSVP_MENU_UNSUB){ try{ RSVP_MENU_UNSUB(); }catch{} RSVP_MENU_UNSUB=null; }
+    } else {
+      if (!RSVP_MENU_UNSUB){
+        const qR = db.collection('rsvp').where('weddingId','==', CURRENT_WEDDING);
+        RSVP_MENU_UNSUB = qR.onSnapshot(rs => {
+          const r = [];
+          rs.forEach(doc => { const d = doc.data()||{}; if (d.menuChoice) r.push({ _id: doc.id, ...d }); });
+          renderMenuRows(r);
+        });
+      }
+    }
+  }, err => console.error('menus onSnapshot error', err));
+}
+
+function ensureMenuControls(){
+  const sec = ensureMenuSection();
+  if (!sec) return;
+  let bar = sec.querySelector('#menuCtrlBar');
+  if (!bar){
+    bar = document.createElement('div');
+    bar.id = 'menuCtrlBar';
+    bar.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0 12px';
+    bar.innerHTML = `
+      <input id="menuSearch" type="search" placeholder="Menülerde ara (isim/telefon/menü)" style="padding:8px 10px; border-radius:10px; border:1px solid #d0d6dd; outline:none; min-width:240px" />
+      <select id="menuChoiceFilter" style="padding:8px 10px; border-radius:10px; border:1px solid #d0d6dd; outline:none">
+        <option value="ALL">Tümü</option>
+        <option value="RED">Kırmızı Et</option>
+        <option value="WHITE">Beyaz Et</option>
+        <option value="VEG">Vejetaryen</option>
+        <option value="VEGAN">Vegan</option>
+        <option value="CHILD">Çocuk</option>
+      </select>
+      <button id="exportMenuCsvBtn" class="secondary">CSV İndir</button>
+      <button id="clearMenuFiltersBtn" class="ghost">Filtreleri Temizle</button>
+    `;
+    const header = sec.querySelector('h2')?.parentElement || sec;
+    header.parentElement.insertBefore(bar, header.nextSibling);
+  }
+  const s = document.getElementById('menuSearch');
+  const c = document.getElementById('menuChoiceFilter');
+  const e = document.getElementById('exportMenuCsvBtn');
+  const clr = document.getElementById('clearMenuFiltersBtn');
+  if (s && !s.dataset.bound){
+    s.dataset.bound='1';
+    s.addEventListener('input', ()=>{
+      clearTimeout(_menuSearchDebounce);
+      _menuSearchDebounce = setTimeout(()=>{ MENU_FILTER.q = s.value||''; renderMenuRows(LAST_MENU_ROWS); }, 200);
+    });
+  }
+  if (c && !c.dataset.bound){
+    c.dataset.bound='1';
+    c.addEventListener('change', ()=>{ MENU_FILTER.choice = c.value||'ALL'; renderMenuRows(LAST_MENU_ROWS); });
+  }
+  if (clr && !clr.dataset.bound){
+    clr.dataset.bound='1';
+    clr.onclick = ()=>{ MENU_FILTER = { q:'', choice:'ALL' }; if (s) s.value=''; if (c) c.value='ALL'; renderMenuRows(LAST_MENU_ROWS); };
+  }
+  if (e && !e.dataset.bound){
+    e.dataset.bound='1';
+    e.onclick = exportMenusCsv;
+  }
+  const bindBadge = (id, choice)=>{
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound){
+      el.dataset.bound='1';
+      el.style.cursor='pointer';
+      el.title='Bu kategoriye filtrele';
+      el.onclick = ()=>{ MENU_FILTER.choice = choice; const c = document.getElementById('menuChoiceFilter'); if (c) c.value = choice; renderMenuRows(LAST_MENU_ROWS); };
+    }
+  };
+  bindBadge('statRed', 'RED');
+  bindBadge('statWhite', 'WHITE');
+  bindBadge('statVeg', 'VEG');
+  bindBadge('statVegan', 'VEGAN');
+  bindBadge('statChild', 'CHILD');
+  const total = document.getElementById('statTotal');
+  if (total && !total.dataset.bound){
+    total.dataset.bound='1';
+    total.style.cursor='pointer';
+    total.title='Tümünü göster';
+    total.onclick = ()=>{ MENU_FILTER = { q:'', choice:'ALL' }; const s=document.getElementById('menuSearch'); const c=document.getElementById('menuChoiceFilter'); if (s) s.value=''; if (c) c.value='ALL'; renderMenuRows(LAST_MENU_ROWS); };
+  }
+}
+
+function exportMenusCsv(){
+  const header = ['firstName','lastName','menuChoice','createdAt'];
+  const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
+  const toTs=(t)=> t && t.toDate ? t.toDate().toISOString() : (t? new Date(t).toISOString(): '');
+  const filtered = applyMenuFilter(LAST_MENU_ROWS);
+  const body = filtered.map(r => [q(r.firstName), q(r.lastName), q(r.menuChoice), q(toTs(r.createdAt||r.menuUpdatedAt))].join(',')).join('\n');
+  const csv = header.join(',') + '\n' + body;
+  const wid = (typeof CURRENT_WEDDING==='string' && CURRENT_WEDDING) ? CURRENT_WEDDING : 'unknown';
+  download(`menus-${wid}.csv`, csv);
+}
+
+// === Seating kaydet ===
 async function saveSeating(){
   const batch = db.batch();
   const base = db.collection('seating').doc(CURRENT_WEDDING).collection('assignments');
@@ -331,7 +586,6 @@ async function saveSeating(){
   alert('Oturma planı kaydedildi.');
 }
 
-
 function boot(){
   enableDnD();
   const lastWedding = localStorage.getItem('ws_admin_wedding');
@@ -341,6 +595,16 @@ function boot(){
   el('refreshBtn').onclick = loadGuests;
   el('loadSeatingBtn').onclick = loadSeating;
   el('saveSeatingBtn').onclick = saveSeating;
+
+  // Menü kontrol barını garantiye al
+  ensureMenuControls();
+  (function bindMenuRefresh(){
+    const lm = el('loadMenuBtn');
+    if (lm && !lm.dataset.bound){
+      lm.dataset.bound = '1';
+      lm.onclick = loadMenuSelections;
+    }
+  })();
 
   el('exportCsvBtn').onclick = async () => {
     const snap = await db.collection('rsvp').where('weddingId','==', CURRENT_WEDDING).get();
@@ -363,6 +627,15 @@ function boot(){
   if (addBtn) addBtn.onclick = addWeddingFirebase;
 
   renderWeddingListFirebase();
+
+  // Üst buton ile paneli aç (varsa)
+  (function bindTopOpenIfAny(){
+    const t = document.getElementById('openNotifyPanelBtnTop');
+    if (t && !t.dataset.bound){
+      t.dataset.bound='1';
+      t.onclick = async ()=>{ const list = await prepareSeatNotifications(); renderNotifyPanel(list); };
+    }
+  })();
 
   // === WhatsApp Davet (rehbersiz, tek link) ===
   const waInviteBtn   = document.getElementById('waInviteBtn');
@@ -397,8 +670,316 @@ function boot(){
 
   if (waInviteBtn)   waInviteBtn.addEventListener('click', openWhatsAppGeneric);
   if (copyInviteBtn) copyInviteBtn.addEventListener('click', copyInviteGeneric);
+
+  // Masa detay modalini hazırla
+  bindTableDetailUi();
 }
+
 document.addEventListener('DOMContentLoaded', boot);
+
+/* ===== MASA DETAY MODALI JS ===== */
+async function openTableDetail(tableKey, anchor){
+  const key = String(tableKey||'').trim();
+  if (!key) return;
+
+  // Remove old tooltip if exists
+  let tip = document.getElementById('tableTooltip');
+  if (tip) tip.remove();
+
+  tip = document.createElement('div');
+  tip.id = 'tableTooltip';
+  tip.style.position = 'fixed';
+  tip.style.background = '#fff';
+  tip.style.border = '1px solid #ccc';
+  tip.style.borderRadius = '8px';
+  tip.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
+  tip.style.padding = '12px';
+  tip.style.fontSize = '14px';
+  tip.style.zIndex = 9999;
+  tip.style.maxWidth = '240px';
+
+  const rect = anchor.getBoundingClientRect();
+  tip.style.left = (rect.right + 10) + 'px';
+  tip.style.top  = rect.top + 'px';
+
+  tip.innerHTML = `
+    <div style="font-weight:600;margin-bottom:6px">Masa ${key}</div>
+    <div id="ttList" style="margin-bottom:6px">Yükleniyor…</div>
+    <button id="ttNotify" style="margin-top:2px;padding:4px 8px;border:0;border-radius:6px;background:#16a34a;color:#fff;cursor:pointer;display:block;width:100%;font-size:13px;">
+      Bu masadakilere WhatsApp gönder
+    </button>
+    <button id="ttClose" style="margin-top:6px;padding:4px 8px;border:0;border-radius:6px;background:#eee;cursor:pointer;display:block;width:100%;font-size:13px;">
+      Kapat
+    </button>`;
+
+  document.body.appendChild(tip);
+
+  document.getElementById('ttClose').onclick = () => tip.remove();
+
+  try{
+    const guestsMap = await getGuestsMap();
+    const items=[];
+    let html='';
+
+    for(const [gid,val] of Object.entries(ASSIGN)){
+      if(String(val.table||'').trim()===key){
+        const g=guestsMap[gid]||{};
+        const nm=`${g.firstName||''} ${g.lastName||''}`.trim()||g.phone||gid;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                   <span>${esc(nm)}</span>
+                   <button data-gid="${gid}" style="border:0;background:#ffeded;padding:2px 6px;border-radius:4px;cursor:pointer">✕</button>
+                 </div>`;
+      }
+    }
+
+    if(!html){
+      html=`<div style="color:#666">Bu masada misafir yok.</div>`;
+    }
+
+    document.getElementById('ttList').innerHTML=html;
+
+    document.querySelectorAll('#tableTooltip button[data-gid]').forEach(btn=>{
+      btn.onclick = () => {
+        const id=btn.getAttribute('data-gid');
+        delete ASSIGN[id];
+        openTableDetail(key, anchor);
+      };
+    });
+    // Bind WhatsApp notify button
+    const notifyBtn = document.getElementById('ttNotify');
+    if (notifyBtn && !notifyBtn.dataset.bound){
+      notifyBtn.dataset.bound = '1';
+      notifyBtn.onclick = async () => {
+        try{
+          await notifyTableWhatsApp(key);
+        }catch(e){
+          console.error('notifyTableWhatsApp error', e);
+          alert('Bu masaya WhatsApp gönderilirken hata oluştu.');
+        }
+      };
+    }
+
+  }catch(e){
+    document.getElementById('ttList').innerHTML='<div style="color:red">Hata oluştu</div>';
+  }
+}
+
+function bindTableDetailUi(){
+  const overlay = el('tableDetailOverlay');
+  const closeBtn = el('tableDetailClose');
+  if (overlay && !overlay.dataset.bound){
+    overlay.dataset.bound = '1';
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay){
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden','true');
+      }
+    });
+  }
+  if (closeBtn && !closeBtn.dataset.bound){
+    closeBtn.dataset.bound = '1';
+    closeBtn.addEventListener('click', () => {
+      const ov = el('tableDetailOverlay');
+      if (!ov) return;
+      ov.classList.remove('show');
+      ov.setAttribute('aria-hidden','true');
+    });
+  }
+}
+
+/* ========= MASA MESAJLARI — WhatsApp Bildirimleri ========= */
+
+
+// RSVP haritası: gerektikçe taze okur (cache kullanmıyoruz ki tutarsızlık olmasın)
+async function getGuestsMap(){
+  const map = {};
+  const snap = await db.collection('rsvp').where('weddingId','==', CURRENT_WEDDING).get();
+  snap.forEach(doc => { map[doc.id] = { _id: doc.id, ...(doc.data()||{}) }; });
+  return map;
+}
+
+function normalizePhoneForWa(ph){
+  return String(ph||'').replace(/\D+/g,'');
+}
+
+function buildRsvpLink(){
+  const base = window.location.origin + (window.location.pathname.replace(/\/admin\.html$/, '/index.html'));
+  const url = new URL(base);
+  url.searchParams.set('wedding', CURRENT_WEDDING);
+  return url.toString();
+}
+
+function buildSeatMessage(name, tableNo, rsvpLink){
+  // Artık sadece masa numarasını içeren basit bir mesaj gönderiyoruz.
+  return `Merhaba, düğünümüzde masa numaranız: ${tableNo} 🎉`;
+}
+
+async function prepareSeatNotifications(){
+  const guests = await getGuestsMap();
+  const rsvpLink = buildRsvpLink();
+  const list = [];
+  for (const [guestId, info] of Object.entries(ASSIGN)){
+    const g = guests[guestId] || {};
+    const fullName = `${g.firstName||''} ${g.lastName||''}`.trim();
+    // Eskiden sadece attendance == "Evet" olanlara gönderiyorduk.
+    // Artık masa ataması yapılmış herkese mesaj hazırlanacak.
+    const tableNo = info && info.table ? info.table : '';
+    if (!tableNo) continue;
+    const phone   = g.phone || '';
+    const waPhone = normalizePhoneForWa(phone);
+    const message = buildSeatMessage(fullName, tableNo, rsvpLink);
+    list.push({ guestId, fullName, tableNo, phone, waPhone, message });
+  }
+  return list;
+}
+
+async function notifyTableWhatsApp(tableKey){
+  const key = String(tableKey || '').trim();
+  if (!key){
+    alert('Masa bilgisi bulunamadı.');
+    return;
+  }
+
+  // Bu masaya atanmış misafirleri hazırlayalım (ASSIGN + RSVP verisi üzerinden)
+  const all = await prepareSeatNotifications();
+  const list = all.filter(it => String(it.tableNo || '').trim() === key);
+
+  if (!list.length){
+    alert(`Masa ${key} için gönderilecek misafir bulunamadı. (Bu masaya atanmış kimse yok.)`);
+    return;
+  }
+
+  // Toplu kullanım için tek bir genel mesaj: sadece masa numarası
+  const msg = `Merhaba, düğünümüzde masa numaranız: ${key} 🎉`;
+
+  if (!confirm(`Masa ${key} için WhatsApp'ta tek bir toplu mesaj penceresi açılacak.\nAlıcıları WhatsApp içinde kendin seçeceksin.\n\nDevam edilsin mi?`)){
+    return;
+  }
+
+  // Sadece 1 adet WhatsApp penceresi açılır, alıcı seçimini kullanıcı yapar
+  const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(wa, '_blank');
+
+  // İsteğe bağlı: bu masadaki herkes için "bildirildi" kaydı düşelim
+  try{
+    for (let i = 0; i < list.length; i++){
+      const it = list[i];
+      await markNotified(it.guestId, it.tableNo);
+    }
+  }catch(e){
+    console.warn('markNotified (toplu) error', e);
+  }
+
+  alert(`Masa ${key} için toplu WhatsApp mesajı açıldı.\nLütfen WhatsApp içinde alıcıları seçip göndermeyi onaylayın.`);
+}
+
+async function markNotified(guestId, tableNo){
+  try{
+    const sentAt = (firebase.firestore && firebase.firestore.FieldValue)
+      ? firebase.firestore.FieldValue.serverTimestamp() : new Date();
+    await db.collection('seatingNotifications')
+      .doc(`${CURRENT_WEDDING}__${guestId}`)
+      .set({ weddingId: CURRENT_WEDDING, guestId, table: tableNo, sentAt }, { merge: true });
+    await db.collection('seating').doc(CURRENT_WEDDING)
+      .collection('assignments').doc(guestId)
+      .set({ notifiedAt: sentAt }, { merge: true });
+  }catch(e){ console.warn('markNotified fail', e); }
+}
+
+function renderNotifyPanel(list){
+  const sec = document.getElementById('notifySection');
+  const ul  = document.getElementById('notifyList');
+  const cnt = document.getElementById('notifyCount');
+  const btnAll = document.getElementById('sendAllWaBtn');
+  const btnCopyAll = document.getElementById('copyAllTextBtn');
+  if (!sec) return;
+
+  sec.style.display = 'block';
+
+  if (!list || !list.length){
+    if (cnt) cnt.textContent = '0';
+    if (ul) ul.innerHTML = '<li class="muted">Gönderilecek kimse bulunamadı. (Masa ataması ve “Evet” katılımı olanlar listelenir.)</li>';
+    sec.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
+  if (cnt) cnt.textContent = String(list.length);
+  if (ul){
+    ul.innerHTML = list.map(item => {
+      const wa = item.waPhone
+        ? `https://wa.me/${item.waPhone}?text=${encodeURIComponent(item.message)}`
+        : `https://wa.me/?text=${encodeURIComponent(item.message)}`;
+      return `
+        <li class="notify-item">
+          <div><b>${esc(item.fullName||'(İsimsiz)')}</b> · Masa <b>${esc(item.tableNo||'?')}</b> · Tel: ${esc(item.phone||'–')}</div>
+          <div class="notify-actions">
+            <a href="${wa}" target="_blank" rel="noopener" class="btn small">WhatsApp</a>
+            <button class="btn small ghost" data-copy="${esc(item.message)}">Metni Kopyala</button>
+          </div>
+        </li>`;
+    }).join('');
+    ul.querySelectorAll('button[data-copy]').forEach(b=>{
+      if (!b.dataset.bound){
+        b.dataset.bound='1';
+        b.onclick = async () => {
+          try{ await navigator.clipboard.writeText(b.getAttribute('data-copy')||''); alert('Mesaj panoya kopyalandı.'); }
+          catch{ /* no-op */ }
+        };
+      }
+    });
+  }
+
+  if (btnAll && !btnAll.dataset.bound){
+    btnAll.dataset.bound='1';
+    btnAll.onclick = async ()=>{
+      for (let i=0; i<list.length; i++){
+        const it = list[i];
+        const wa = it.waPhone ? `https://wa.me/${it.waPhone}?text=${encodeURIComponent(it.message)}`
+                              : `https://wa.me/?text=${encodeURIComponent(it.message)}`;
+        window.open(wa, '_blank');
+        await markNotified(it.guestId, it.tableNo);
+        await new Promise(r=>setTimeout(r, 500));
+      }
+      alert('WhatsApp pencereleri açıldı. Göndermeyi WhatsApp içinde onaylayın.');
+    };
+  }
+
+  if (btnCopyAll && !btnCopyAll.dataset.bound){
+    btnCopyAll.dataset.bound='1';
+    btnCopyAll.onclick = async ()=>{
+      const bulk = list.map(it => `• ${it.fullName||'(İsimsiz)'} — Masa ${it.tableNo}\n${it.message}\n`).join('\n');
+      try{ await navigator.clipboard.writeText(bulk); alert('Tüm mesajlar panoya kopyalandı.'); }
+      catch{ prompt('Kopyalamak için Ctrl/Cmd+C:', bulk); }
+    };
+  }
+
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// Kaydet sonrasında paneli otomatik açmak için saveSeating'i sarmala
+const _origSaveSeating = saveSeating;
+saveSeating = async function(){
+  await _origSaveSeating();
+  try{
+    const list = await prepareSeatNotifications();
+    renderNotifyPanel(list);
+  }catch(e){ console.warn('notify panel error', e); }
+};
+
+// Girişten sonra manuel açma butonu
+(function bindNotifyOpen(){
+  // Birkaç denemeli bağla (DOM geç yüklenebilir)
+  const tryBind = () => {
+    const btn = document.getElementById('openNotifyPanelBtn');
+    if (btn && !btn.dataset.bound){
+      btn.dataset.bound='1';
+      btn.onclick = async ()=>{ const list = await prepareSeatNotifications(); renderNotifyPanel(list); };
+    }
+  };
+  tryBind();
+  setTimeout(tryBind, 300);
+  setTimeout(tryBind, 1000);
+})();
 
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Unhandled promise rejection:', e.reason);
