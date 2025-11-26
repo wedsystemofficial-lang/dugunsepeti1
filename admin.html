@@ -15,13 +15,13 @@
 
   <style>
     :root{
-      --bg:#050815;
+      --bg:#050816;
       --bg-soft:#0b1020;
       --fg:#f9fafb;
       --muted:#9ca3af;
       --border:#1f2937;
-      --accent:#facc15;
-      --accent-soft:rgba(250,204,21,0.15);
+      --accent:#a48784;               /* Navbar rengi accent olarak */
+      --accent-soft:rgba(164,135,132,0.18);
       --chip-bg:#111827;
     }
 
@@ -33,7 +33,7 @@
       margin:0;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
       color:var(--fg);
-      background:#c89595 url("img/landing-bg.jpg") center center / cover fixed no-repeat;
+      background:#050816;
       overflow:hidden; /* Tam ekran app hissi */
     }
 
@@ -61,7 +61,8 @@
       align-items:center;
       justify-content:space-between;
       padding:0 24px;
-      background:rgb(42, 37, 37);
+      background:#a48784;
+      color:#ffffff;
       border-bottom:1px solid rgba(31,41,55,0.8);
       backdrop-filter:blur(16px) saturate(160%);
     }
@@ -95,6 +96,7 @@
       letter-spacing:.05em;
       text-transform:uppercase;
       font-size:13px;
+      color:#ffffff;
     }
 
     .nav-menu{
@@ -105,7 +107,7 @@
     }
 
     .nav-link{
-      color:var(--muted);
+      color:#ffffff;
       font-size:14px;
       padding:7px 12px;
       border-radius:999px;
@@ -121,11 +123,11 @@
     }
 
     .nav-link.primary{
-      color:#111827;
-      background:var(--accent);
+      color:#ffffff;
+      background:linear-gradient(135deg,#4f46e5,#3b82f6);
       border-color:transparent;
       font-weight:600;
-      box-shadow:0 12px 30px rgba(250,204,21,0.35);
+      box-shadow:0 12px 30px rgba(0, 0, 0, 0.35);
     }
     .nav-link.primary:hover{
       filter:brightness(1.04);
@@ -144,7 +146,7 @@
     }
     .nav-login label{
       font-size:11px;
-      color:var(--muted);
+      color:#ffffff;
     }
     .nav-login input{
       width:130px;
@@ -155,6 +157,7 @@
       background:#020617;
       color:var(--fg);
       outline:none;
+      color:#ffffff;
     }
     .nav-login input:focus{
       border-color:var(--accent);
@@ -171,6 +174,7 @@
       color:#ecfdf5;
       box-shadow:0 10px 25px rgba(34,197,94,0.35);
       transition:transform .15s ease, box-shadow .15s ease;
+      color:#ffffff !important;
     }
     .nav-login button:hover{
       transform:translateY(-1px);
@@ -190,10 +194,11 @@
     .seat-area{
       flex:3;
       min-width:0;
-      background:rgba(15,23,42,0.94);
+      background:radial-gradient(circle at 0% 0%, rgba(148,163,184,0.18), transparent 55%),
+                 #020617;
       border-radius:18px;
-      border:1px solid rgba(31,41,55,0.95);
-      box-shadow:0 20px 50px rgba(0,0,0,0.7);
+      border:1px solid rgba(15,23,42,0.9);
+      box-shadow:0 20px 50px rgba(0,0,0,0.8);
       padding:18px 18px 14px;
       display:flex;
       flex-direction:column;
@@ -255,17 +260,17 @@
       position:relative;
     }
 
-    /* Masa slotları — tüm alanı dolduran grid */
     #dragArea{
       flex:1;
       position:relative;
       border-radius:14px;
       overflow:hidden;
       background:
-        url("salon-krokisi.png") center/contain no-repeat,
-        radial-gradient(circle at 10% 10%, rgba(15,23,42,0.9), transparent 55%),
-        #020617;
+        url("salon-krokisi.jpeg") center/contain no-repeat,
+        radial-gradient(circle at 10% 10%, rgba(15,23,42,0.9), transparent 100%),
+        #ffffff;
       margin-top:4px;
+      display:none; /* giriş sonrası açılacak */
     }
 
     #tablesLayer{
@@ -275,87 +280,76 @@
 
     .table-node{
       position:absolute;
-      width:72px;
-      height:72px;
+      width:42px;
+      height:42px;
       border-radius:50%;
-      background:#279bf4; /* Lila masa gövdesi */
-      border:3px solid #6b21a8; /* Mor çerçeve */
+      background:#279bf4;
+      border:2px solid #6b21a8;
       display:flex;
       align-items:center;
       justify-content:center;
       font-weight:700;
-      font-size:14px;
+      font-size:11px;
       color:#111827;
       cursor:grab;
-      box-shadow:0 14px 30px rgba(15,23,42,0.75);
+      box-shadow:0 8px 20px rgba(15,23,42,0.75);
       user-select:none;
       transition:box-shadow .15s ease, transform .15s ease;
     }
 
     .table-node.long{
-      width:160px;
-      height:46px;
+      width:96px;
+      height:32px;
       border-radius:14px;
     }
 
-    /* Sandalye sembolleri – yuvarlak masalar için
-       (uzun masa sandalyeleriyle aynı stil, dairesel yerleşim) */
     .table-node.round::before {
       content: "";
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 10px;
-      height: 6px;
+      width: 8px;
+      height: 5px;
       border-radius: 999px;
       background: transparent;
       transform: translate(-50%, -50%);
       pointer-events: none;
       box-shadow:
-        /* üst */
-        0  -40px 0 #111827,
-        /* sağ-üst */
-        22px -34px 0 #111827,
-        /* sağ */
-        36px -12px 0 #111827,
-        /* sağ-alt */
-        36px  12px 0 #111827,
-        /* alt */
-        22px  34px 0 #111827,
-        0    40px 0 #111827,
-        /* sol-alt */
-        -22px 34px 0 #111827,
-        /* sol */
-        -36px 12px 0 #111827,
-        /* sol-üst */
-        -36px -12px 0 #111827,
-        -22px -34px 0 #111827;
+        0  -24px 0 #111827,
+        13px -20px 0 #111827,
+        22px  -8px 0 #111827,
+        22px   8px 0 #111827,
+        13px  20px 0 #111827,
+        0     24px 0 #111827,
+        -13px 20px 0 #111827,
+        -22px  8px 0 #111827,
+        -22px -8px 0 #111827,
+        -13px -20px 0 #111827;
     }
 
-    /* Sandalye sembolleri – uzun masalar için (üst ve alt sıra) */
     .table-node.long::before,
     .table-node.long::after {
       content:"";
       position:absolute;
       left:50%;
-      width:10px;
-      height:6px;
-      border-radius:999px; /* ince uzun sandalye formu */
+      width:8px;
+      height:5px;
+      border-radius:999px;
       background:transparent;
       transform:translateX(-50%);
       pointer-events:none;
       box-shadow:
-        -42px 0 0 #111827,
-        -21px 0 0 #111827,
-        0 0 0 #111827,
-        21px 0 0 #111827,
-        42px 0 0 #111827;
+        -28px 0 0 #111827,
+        -14px 0 0 #111827,
+        0     0 0 #111827,
+        14px  0 0 #111827,
+        28px  0 0 #111827;
     }
     .table-node.long::before {
-      top:-6px;   /* üst sıra sandalyeler */
+      top:-5px;
     }
     .table-node.long::after {
-      bottom:-6px; /* alt sıra sandalyeler */
+      bottom:-5px;
     }
 
     .table-node:hover{
@@ -417,10 +411,10 @@
       border:1px solid rgba(75,85,99,0.9);
       font-size:11px;
       cursor:grab;
-      color: #111827 !important;
+      color: var(--fg) !important; /* Metni açık renge çek */
+      font-weight:500;             /* Biraz daha kalın yap */
     }
 
-    /* Misafir paneli (sağ taraf) */
     .guest-panel{
       flex:2;
       min-width:260px;
@@ -433,6 +427,14 @@
       display:flex;
       flex-direction:column;
       backdrop-filter:blur(18px) saturate(160%);
+    }
+
+    .admin-main.guests-collapsed .guest-panel{
+      display:none;
+    }
+    .admin-main.guests-collapsed .seat-area{
+      max-width:100%;
+      flex:1;
     }
 
     .guest-panel h2{
@@ -500,7 +502,6 @@
       padding:6px;
     }
 
-    /* Tablo yerine basit chip havuzu + minilist */
     #guestPool{
       margin-bottom:6px;
       min-height:56px;
@@ -528,8 +529,6 @@
       color:var(--muted);
       font-size:11px;
     }
-
-    /* WhatsApp davet linki */
     .wa-box{
       margin-top:8px;
       padding:7px 8px;
@@ -551,7 +550,6 @@
       cursor:pointer;
     }
 
-    /* Toast */
     #toast{
       position:fixed;
       bottom:18px;
@@ -572,10 +570,6 @@
       transform:translateY(0);
     }
 
-    /*
-       ===== MASA DETAY MODALI =====
-       Bir masaya tıklayınca açılan misafir listesi paneli
-    */
     .table-detail-overlay{
       position:fixed;
       inset:0;
@@ -591,12 +585,12 @@
     .table-detail-card{
       width:min(420px,90%);
       max-height:80vh;
-      background:#000000;
+      background:#020617;
       border-radius:18px;
-      border:1px solid rgba(148,163,184,0.6);
+      border:1px solid rgba(31,41,55,0.95);
       box-shadow:0 24px 60px rgba(0,0,0,0.85);
       padding:18px 18px 14px;
-      color:#111827;
+      color:var(--fg);
       display:flex;
       flex-direction:column;
       box-sizing:border-box;
@@ -614,7 +608,7 @@
     }
     .table-detail-meta{
       font-size:12px;
-      color:#4b5563;
+      color:var(--muted);
     }
     .table-detail-close{
       border:0;
@@ -635,7 +629,7 @@
     }
     .table-detail-body{
       font-size:13px;
-      color:#4b5563;
+      color:#e5e7eb;    /* Açık gri, siyah zemin üzerinde okunaklı */
       margin-bottom:10px;
     }
     .table-detail-guests{
@@ -643,7 +637,7 @@
       overflow:auto;
       border-radius:12px;
       border:1px solid rgba(31,41,55,0.95);
-      background:#000000;
+      background:#020617;
       padding:8px;
       box-sizing:border-box;
     }
@@ -659,38 +653,47 @@
       justify-content:space-between;
       padding:6px 8px;
       border-radius:10px;
-      background:#000000;
+      background:#020617;
       border:1px solid rgba(31,41,55,0.9);
       font-size:12px;
       margin-bottom:6px;
       gap:6px;
-      color:#111827;
+      color:var(--fg);
     }
     .table-detail-guest-main{
       display:flex;
       flex-direction:column;
       gap:2px;
+      color:var(--fg);
     }
     .table-detail-guest-name{
-      font-weight:500;
-      color:#000000;
+      font-weight:700 !important;
+      color:var(--fg) !important;
+      opacity:1 !important;
+      filter:none !important;
+      text-shadow:none !important;
+    }
+    .table-detail-guest-item *{
+      color:var(--fg);
+      opacity:1 !important;
+      filter:none !important;
+      text-shadow:none !important;
     }
     .table-detail-guest-meta{
       font-size:11px;
-      color:#000000;
+      color:#9ca3af;   /* Daha soluk, ama siyah zeminde okunur */
     }
     .table-detail-guest-count{
       font-size:11px;
       font-weight:600;
       padding:4px 7px;
       border-radius:999px;
-      background:rgba(30,64,175,0.55);
+      background:#111827;
       border:1px solid rgba(96,165,250,0.8);
-      color:#000000;
+      color:#e5e7eb;
       white-space:nowrap;
     }
 
-    /* Küçük ekran */
     @media (max-width:1024px){
       .admin-main{
         flex-direction:column;
@@ -700,28 +703,195 @@
         overflow:auto;
       }
     }
-    .mini-table-popup {
-      background: #000000;
-      color: #111827 !important;
-    }
-    .mini-table-popup *,
-    .mini-table-popup .chip span {
-      color: #111827 !important;
-    }
-    .mini-table-popup .chip {
-      background: #000000;
-      border-color: #9ca3af;
+
+    /* Masa popup'ı: Tam siyah zemin, beyaz ve net yazılar */
+    .table-popup{
+      background:#020617 !important;
+      border-radius:16px;
+      border:1px solid rgba(31,41,55,0.9);
+      box-shadow:0 24px 60px rgba(0,0,0,0.9);
+      color:#f9fafb !important;
     }
 
-    /* Tooltip popup for table details */
-    #tableTooltip {
-      background: #ffffff !important;
-      color: #111827 !important;
-      border-radius: 10px;
-      box-shadow: 0 18px 40px rgba(15,23,42,0.35);
+    .table-popup *{
+      color:#f9fafb !important;
+      opacity:1 !important;
+      filter:none !important;
+      text-shadow:none !important;
     }
-    #tableTooltip * {
-      color: #111827 !important;
+
+    .table-popup .popup-guest-name{
+      font-weight:600 !important;
+    }
+
+    .table-popup button{
+      background:linear-gradient(135deg,#22c55e,#16a34a) !important;
+      color:#fff !important;
+      border:none !important;
+      border-radius:8px !important;
+      font-weight:600 !important;
+    }
+
+    .table-popup button:hover{
+      filter:brightness(1.06);
+    }
+
+    /* ===== AUTH LOCKED & LOGIN OVERLAY ===== */
+    body.auth-locked .admin-main{
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(6px);
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    body.auth-locked .admin-nav{
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(-10px);
+      transition:opacity .25s ease, transform .25s ease;
+    }
+
+    .login-overlay{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .3s ease;
+    }
+    body.auth-locked .login-overlay{
+      opacity:1;
+      pointer-events:auto;
+    }
+    .login-card{
+      width:min(420px, 90vw);
+      background:rgba(15,23,42,0.96);
+      border-radius:20px;
+      border:1px solid rgba(148,163,184,0.65);
+      box-shadow:0 26px 70px rgba(0,0,0,0.85);
+      padding:22px 20px 18px;
+      position:relative;
+      overflow:hidden;
+      animation:loginPop .4s ease-out;
+    }
+    .login-card::before{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(250,204,21,0.16), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(96,165,250,0.16), transparent 55%);
+      opacity:0.55;
+      pointer-events:none;
+    }
+    .login-card-inner{
+      position:relative;
+      z-index:1;
+    }
+    .login-title{
+      font-size:20px;
+      font-weight:700;
+      margin:0 0 4px;
+    }
+    .login-sub{
+      font-size:13px;
+      color:var(--muted);
+      margin:0 0 16px;
+    }
+    .login-fields{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .login-fields label{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:3px;
+      display:block;
+    }
+    .login-fields input{
+      width:100%;
+      font-size:13px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:#020617;
+      color:var(--fg);
+      outline:none;
+    }
+    .login-fields input:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 2px rgba(250,204,21,0.25);
+    }
+    .login-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      align-items:center;
+    }
+    .login-actions small{
+      font-size:11px;
+      color:var(--muted);
+    }
+    .login-btn-main{
+      border-radius:999px;
+      border:0;
+      padding:8px 16px;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      background:linear-gradient(135deg,#22c55e,#16a34a);
+      color:#ecfdf5;
+      box-shadow:0 14px 36px rgba(34,197,94,0.45);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .login-btn-main:hover{
+      transform:translateY(-1px);
+      box-shadow:0 18px 44px rgba(34,197,94,0.6);
+    }
+    .login-hint{
+      margin-top:10px;
+      font-size:11px;
+      color:var(--muted);
+    }
+    @keyframes loginPop{
+      from{opacity:0; transform:translateY(8px) scale(.97);}
+      to{opacity:1; transform:translateY(0) scale(1);}
+    }
+    /* Popup içinde açık yeşil / gri zemin üzerindeki isimler SİYAH ve net görünsün diye */
+    .seat-area [style*="bbf7d0"],
+    .seat-area [style*="rgb(187, 247, 208)"],
+    .seat-area [style*="e5e7eb"],
+    .seat-area [style*="rgb(229, 231, 235)"]{
+      color:#000000 !important;
+      opacity:1 !important;
+      filter:none !important;
+      font-weight:600 !important;
+      text-shadow:0 0 1px rgb(0, 0, 0);
+    }
+
+    /* Genel popup fix: inline absolute kutulardaki yazılar soluk görünmesin */
+    .seat-area [style*="position: absolute"]{
+      opacity:1 !important;
+      filter:none !important;
+    }
+    .seat-area [style*="position: absolute"] *{
+      color:#000000 !important;
+      opacity:1 !important;
+      filter:none !important;
+      text-shadow:none !important;
+      font-weight:600 !important;
+    }
+
+    /* Herhangi bir inline opacity ile soluk görünen kartları (özellikle masa popup'ını) tam opak yap */
+    body [style*="opacity"]{
+      opacity:1 !important;
+      filter:none !important;
     }
   </style>
 
@@ -747,6 +917,41 @@
 </head>
 
 <body class="auth-locked">
+  <!-- FULLSCREEN LOGIN OVERLAY -->
+  <div id="adminLoginOverlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-card-inner">
+        <h1 class="login-title">DugunSepeti Admin</h1>
+        <p class="login-sub">
+          Düğün ID ve admin şifreniz ile panele giriş yapın. Misafirler, oturma planı ve promosyonlar seçili düğüne bağlanır.
+        </p>
+
+        <div class="login-fields">
+          <div>
+            <label for="overlayWeddingId">Düğün ID</label>
+            <input id="overlayWeddingId" placeholder="örn: kerem-yagmur">
+          </div>
+          <div>
+            <label for="overlayPassword">Şifre</label>
+            <input id="overlayPassword" type="password" placeholder="••••••">
+          </div>
+        </div>
+
+        <div class="login-actions">
+          <small>Giriş sonrası tüm sayfalar bu düğüne bağlanır.</small>
+          <button type="button" id="overlayLoginBtn" class="login-btn-main">
+            <span>Giriş Yap</span>
+          </button>
+        </div>
+
+        <p class="login-hint">
+          Not: Bu ekrandaki bilgiler, üst menüdeki giriş alanlarına otomatik işlenir. Şifre doğrulaması Firestore’daki
+          <code>weddings</code> koleksiyonuna göre yapılır.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <div class="bg-overlay"></div>
 
   <div class="admin-shell">
@@ -758,11 +963,11 @@
 
         <nav class="nav-menu">
           <a href="#misafirler" class="nav-link">Misafirler</a>
-          <a href="promosyonlar.html" class="nav-link">Promosyonlar</a>
-          <a href="vendors.html" class="nav-link">Makyaj &amp; Kuaför</a>
-          <a href="vendors.html" class="nav-link">Fotoğraf &amp; Video</a>
-          <a href="landing.html#hizmetler" class="nav-link">Hizmetler</a>
-          <a href="landing.html" class="nav-link primary">Ürün Sayfası</a>
+          <a href="promosyonlar.html" class="nav-link" data-link-wedding data-base-href="promosyonlar.html">Promosyonlar</a>
+          <a href="vendors.html" class="nav-link" data-link-wedding data-base-href="vendors.html">Makyaj &amp; Kuaför</a>
+          <a href="vendors.html" class="nav-link" data-link-wedding data-base-href="vendors.html#foto">Fotoğraf &amp; Video</a>
+          <a href="landing.html#hizmetler" class="nav-link" data-link-wedding data-base-href="landing.html#hizmetler">Hizmetler</a>
+          <a href="landing.html" class="nav-link primary" data-link-wedding data-base-href="landing.html">Ürün Sayfası</a>
         </nav>
       </div>
 
@@ -793,8 +998,9 @@
             </div>
           </div>
           <div class="seat-actions">
-            <button id="loadSeatingBtn" class="btn secondary">Planı Yükle</button>
-            <button id="saveSeatingBtn" class="btn primary">Kaydet</button>
+            <button id="toggleGuestsBtn" class="btn secondary" type="button">Misafirleri gizle</button>
+            <button id="loadSeatingBtn" class="btn secondary" type="button">Planı Yükle</button>
+            <button id="saveSeatingBtn" class="btn primary" type="button">Kaydet</button>
           </div>
         </div>
 
@@ -827,6 +1033,11 @@
       <!-- MİSAFİR PANELİ -->
       <aside class="guest-panel" id="misafirler">
         <h2>Misafirler</h2>
+        <div class="guest-tabs" style="display:flex; gap:6px; margin-bottom:10px;">
+          <button id="tabAllGuests" class="btn secondary small" type="button">Genel</button>
+          <button id="tabAssignedGuests" class="btn secondary small" type="button">Yerleştirilenler</button>
+          <button id="tabUnassignedGuests" class="btn secondary small" type="button">Yerleştirilmeyenler</button>
+        </div>
         <div class="meta">
           RSVP kayıtları; sürükleyip masalara bırak. Gösterilen: <b><span id="countShown">0</span></b> ·
           Kişi (gösterilen): <b><span id="sumShown">0</span></b>
@@ -841,30 +1052,6 @@
           <input id="searchBox" placeholder="İsim / Telefon ara">
         </div>
 
-        <div class="guest-actions">
-          <button id="refreshBtn">Yenile</button>
-          <button id="exportCsvBtn">Masa Düzenini İndir</button>
-          <button id="quickSavePlan" class="primary">Planı Kaydet</button>
-        </div>
-
-        <div class="guest-scroll">
-          <!-- Drag için chip havuzu -->
-          <div id="guestPool"></div>
-
-          <!-- Detay listesi (admin.js dolduruyor) -->
-          <table id="guestTable">
-            <thead>
-              <tr>
-                <th>Ad Soyad</th>
-                <th>Tel</th>
-                <th>Durum</th>
-                <th>Kişi</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
         <div class="wa-box">
           <span>Davet linkini WhatsApp ile paylaş:</span>
           <button id="waInviteBtn" type="button">WhatsApp Aç</button>
@@ -874,11 +1061,45 @@
         <div style="margin-top:6px; font-size:11px; color:var(--muted); word-break:break-all;">
           Link: <code id="rsvpLink">(weddingId seçildiğinde)</code>
         </div>
+
+        <div class="guest-actions">
+          <button id="refreshBtn">Yenile</button>
+          <button id="exportCsvBtn">Masa Düzenini İndir</button>
+        </div>
+
+        <div class="guest-scroll">
+          <div id="guestTabsContent">
+
+            <div id="tabAll" class="tab-page">
+              <div id="guestPool"></div>
+              <table id="guestTable">
+                <thead>
+                  <tr>
+                    <th>Ad Soyad</th>
+                    <th>Tel</th>
+                    <th>Durum</th>
+                    <th>Kişi</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="tabAssigned" class="tab-page" style="display:none;">
+              <div id="assignedList" style="font-size:12px; color:var(--fg);"></div>
+            </div>
+
+            <div id="tabUnassigned" class="tab-page" style="display:none;">
+              <div id="unassignedList" style="font-size:12px; color:var(--fg);"></div>
+            </div>
+
+          </div> <!-- END guestTabsContent -->
+        </div>
+
       </aside>
     </main>
   </div>
 
-  <!-- MASA DETAY MODALI (HTML) -->
+  <!-- MASA DETAY MODALI -->
   <div id="tableDetailOverlay" class="table-detail-overlay" aria-hidden="true">
     <div class="table-detail-card" role="dialog" aria-modal="true" aria-labelledby="tableDetailTitle">
       <div class="table-detail-header">
@@ -901,7 +1122,6 @@
   <div id="toast"></div>
 
   <script>
-    // Basit toast helper (admin.js ile çakışmaz)
     (function(){
       const toast = document.getElementById('toast');
       window.showToast = function(msg){
@@ -916,7 +1136,6 @@
   <script>
     (function(){
       const tablesLayer = document.getElementById('tablesLayer');
-      
       let tableCounter = 0;
       const tableEls = new Map();
 
@@ -986,7 +1205,7 @@
         tableEls.set(docId, el);
         makeDraggable(el, { id: docId });
 
-        // sağ tık ile masa silme
+
         el.addEventListener('contextmenu', async (ev) => {
           ev.preventDefault();
           const w = getActiveWeddingId();
@@ -1087,17 +1306,139 @@
       document.getElementById('addLongTable')?.addEventListener('click', () => addTable('long'));
       document.getElementById('clearTablesBtn')?.addEventListener('click', clearTables);
 
+      function getOrCreateAdminSessionToken(){
+        try{
+          // Önce var mı diye bak
+          let existing = null;
+          try{
+            existing = sessionStorage.getItem('adminSessionToken') ||
+                       localStorage.getItem('adminSessionToken');
+          }catch(e){}
+          if (existing) return existing;
+
+          // Yeni random token üret
+          const arr = new Uint8Array(16);
+          if (window.crypto && window.crypto.getRandomValues) {
+            window.crypto.getRandomValues(arr);
+          } else {
+            // fallback
+            for (let i = 0; i < arr.length; i++) {
+              arr[i] = Math.floor(Math.random() * 256);
+            }
+          }
+          const token = Array.from(arr)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+
+          try{
+            sessionStorage.setItem('adminSessionToken', token);
+            localStorage.setItem('adminSessionToken', token);
+          }catch(e){}
+
+          return token;
+        }catch(e){
+          console.warn('session token üretilemedi', e);
+          return 'dev-' + Date.now();
+        }
+      }
+
+      function updateNavLinksForWedding(w, sessionToken){
+        try{
+          document.querySelectorAll('[data-link-wedding]').forEach(a => {
+            const base = a.getAttribute('data-base-href') || a.getAttribute('href');
+            if(!base) return;
+            try{
+              const url = new URL(base, window.location.href);
+              url.searchParams.set('wedding', w);
+              if (sessionToken) {
+                url.searchParams.set('session', sessionToken);
+              }
+              a.href = url.pathname + url.search + url.hash;
+            }catch(e){
+              const [path, hash] = base.split('#');
+              const glue = path.includes('?') ? '&' : '?';
+              let href = path + glue + 'wedding=' + encodeURIComponent(w);
+              if (sessionToken) {
+                href += '&session=' + encodeURIComponent(sessionToken);
+              }
+              a.href = href + (hash ? '#' + hash : '');
+            }
+          });
+        }catch(e){
+          console.warn('Nav link update error', e);
+        }
+      }
+
       const currentWeddingSpan = document.getElementById('currentWedding');
       if (currentWeddingSpan) {
         const obs = new MutationObserver(() => {
           const w = getActiveWeddingId();
-          if (w) loadTablesFor(w);
+          const dragArea = document.getElementById('dragArea');
+          if (dragArea) {
+            dragArea.style.display = w ? 'block' : 'none';
+          }
+          if (w) {
+            document.body.classList.remove('auth-locked');
+            let sessionToken = null;
+            try{
+              sessionToken = getOrCreateAdminSessionToken();
+              localStorage.setItem('currentWeddingId', w);
+              localStorage.setItem('weddingId', w);
+            }catch(e){
+              console.warn('localStorage yazılamadı', e);
+            }
+            updateNavLinksForWedding(w, sessionToken);
+            loadTablesFor(w);
+          }
         });
         obs.observe(currentWeddingSpan, { childList: true });
+      }
+
+      // Misafir paneli göster/gizle toggle
+      const toggleGuestsBtn = document.getElementById('toggleGuestsBtn');
+      const adminMainEl = document.querySelector('.admin-main');
+      if (toggleGuestsBtn && adminMainEl) {
+        let guestsHidden = false;
+        toggleGuestsBtn.addEventListener('click', () => {
+          guestsHidden = !guestsHidden;
+          if (guestsHidden) {
+            adminMainEl.classList.add('guests-collapsed');
+            toggleGuestsBtn.textContent = 'Misafirleri göster';
+          } else {
+            adminMainEl.classList.remove('guests-collapsed');
+            toggleGuestsBtn.textContent = 'Misafirleri gizle';
+          }
+        });
       }
     })();
   </script>
 
   <script src="admin.js"></script>
+  <script>
+    // Overlay login ekranını navbardaki gerçek login alanına bağla
+    (function(){
+      const overlayWedding = document.getElementById('overlayWeddingId');
+      const overlayPassword = document.getElementById('overlayPassword');
+      const overlayLoginBtn = document.getElementById('overlayLoginBtn');
+
+      const navWedding = document.getElementById('weddingId');
+      const navPassword = document.getElementById('password');
+      const navLoginBtn = document.getElementById('loginBtn');
+
+      if(overlayLoginBtn && navWedding && navPassword && navLoginBtn){
+        overlayLoginBtn.addEventListener('click', function(){
+          const w = (overlayWedding.value || '').trim();
+          const p = overlayPassword.value || '';
+          if(!w || !p){
+            window.showToast && showToast('Lütfen Düğün ID ve şifre girin.');
+            return;
+          }
+          navWedding.value = w;
+          navPassword.value = p;
+          navLoginBtn.click();
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

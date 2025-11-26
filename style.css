@@ -214,3 +214,31 @@ button.glow::after {
   from { box-shadow: 0 0 16px rgba(242,194,101,.45), 0 0 30px rgba(255,215,138,.35); }
   to   { box-shadow: 0 0 30px rgba(242,194,101,.95), 0 0 56px rgba(255,215,138,.65); }
 }
+
+/* === Masa popup görünürlüğü (admin) === */
+.table-popup {
+  background: rgba(15, 23, 42, 0.96); /* koyu lacivert/siyah panel */
+  color: #f9fafb !important;          /* açık yazı rengi */
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(18px);
+}
+
+/* İçerideki tüm metinler net görünsün, saydamlık olmasın */
+.table-popup,
+.table-popup * {
+  color: #f9fafb !important;
+  opacity: 1 !important;
+}
+
+/* İsim satırları */
+.table-popup .popup-guest {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Masa başlığı */
+.table-popup .popup-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}

@@ -299,6 +299,11 @@ async function loadGuests(){
       pool.appendChild(chip);
     });
   }
+
+  // Misafir kovaları (Genel / Yerleştirilen / Yerleştirilmeyen) özetini güncelle
+  if (typeof renderGuestBuckets === 'function') {
+    renderGuestBuckets().catch?.(console.warn);
+  }
 }
 
 // === Drag & Drop Seating ===
@@ -374,6 +379,93 @@ async function loadSeating(){
   });
 
   // Misafir chip'lerini masaların üstüne taşımıyoruz; atamalar sadece ASSIGN içinde tutuluyor.
+
+  // Oturma planı yüklendikten sonra da kovaları güncelle
+  if (typeof renderGuestBuckets === 'function') {
+    renderGuestBuckets().catch?.(console.warn);
+  }
+}
+
+/* ========= MİSAFİRLER — GENEL / YERLEŞTİRİLEN / YERLEŞTİRİLMEYEN ========= */
+
+async function renderGuestBuckets(){
+  if (!CURRENT_WEDDING) return;
+
+  // RSVP'deki tüm misafirler
+  const guestsMap = await getGuestsMap();
+
+  // Hangi misafir hangi masaya atanmış?
+  const placedIds = new Set(
+    Object.entries(ASSIGN || {})
+      .filter(([id, info]) => info && info.table)
+      .map(([id]) => id)
+  );
+
+  const placed = [];       // yerleştirilenler
+  const unplaced = [];     // yerleştirilmeyenler
+  let totalHeadcount = 0;  // genel kişi sayısı (guestCount toplamı)
+
+  Object.values(guestsMap).forEach(g => {
+    const id   = g._id;
+    const cnt  = Number(g.guestCount || 1);
+    const name = `${g.firstName || ''} ${g.lastName || ''}`.trim() || g.phone || id;
+
+    totalHeadcount += cnt;
+
+    const bucket = placedIds.has(id) ? placed : unplaced;
+    bucket.push({
+      id,
+      name,
+      phone: g.phone || '',
+      guestCount: cnt,
+      attendance: g.attendance || '',
+    });
+  });
+
+  // İsimlere göre sırala
+  const sortByName = arr => arr.sort((a,b) =>
+    a.name.localeCompare(b.name, 'tr', { sensitivity:'base' })
+  );
+  sortByName(placed);
+  sortByName(unplaced);
+
+  // HTML elemanlarını yakala (ID'ler admin.html tarafındaki bloklara göre)
+  const elSummary       = document.getElementById('guestSummaryOverall');   // Genel info metni
+  const elPlacedList    = document.getElementById('guestListPlaced');      // Yerleştirilenler UL
+  const elUnplacedList  = document.getElementById('guestListUnplaced');    // Yerleştirilmeyenler UL
+  const elPlacedCount   = document.getElementById('guestPlacedCount');     // Yerleştirilen misafir sayısı
+  const elUnplacedCount = document.getElementById('guestUnplacedCount');   // Yerleştirilmeyen misafir sayısı
+  const elTotalHead     = document.getElementById('guestTotalHeadcount');  // Toplam kişi sayısı
+
+  if (elSummary){
+    elSummary.textContent =
+      `Toplam kişi: ${totalHeadcount} · Yerleştirilen: ${placed.length} misafir · Yerleştirilmeyen: ${unplaced.length} misafir`;
+  }
+  if (elTotalHead)     elTotalHead.textContent     = String(totalHeadcount);
+  if (elPlacedCount)   elPlacedCount.textContent   = String(placed.length);
+  if (elUnplacedCount) elUnplacedCount.textContent = String(unplaced.length);
+
+  if (elPlacedList){
+    elPlacedList.innerHTML = placed.map(g => `
+      <li class="guest-row">
+        <div class="guest-main">
+          <span class="guest-name">${esc(g.name)}</span>
+          <span class="guest-meta">Kişi sayısı: ${g.guestCount} · Tel: ${esc(g.phone || '—')}</span>
+        </div>
+      </li>
+    `.trim()).join('') || '<li class="muted">Yerleştirilen misafir yok.</li>';
+  }
+
+  if (elUnplacedList){
+    elUnplacedList.innerHTML = unplaced.map(g => `
+      <li class="guest-row">
+        <div class="guest-main">
+          <span class="guest-name">${esc(g.name)}</span>
+          <span class="guest-meta">Kişi sayısı: ${g.guestCount} · Tel: ${esc(g.phone || '—')}</span>
+        </div>
+      </li>
+    `.trim()).join('') || '<li class="muted">Tüm misafirler masalara yerleştirilmiş.</li>';
+  }
 }
 // === MENÜ SEÇİMLERİ ===
 function ensureMenuSection(){
@@ -575,6 +667,66 @@ function exportMenusCsv(){
   download(`menus-${wid}.csv`, csv);
 }
 
+// === Seating CSV Export ===
+async function exportSeatingCsv(){
+  if (!CURRENT_WEDDING){
+    alert('Önce weddingId ile giriş yapın.');
+    return;
+  }
+
+  // Eğer hiç atama yoksa uyar
+  if (!ASSIGN || !Object.keys(ASSIGN).length){
+    alert('Henüz masa ataması yapılmamış görünüyor. Önce misafirleri masalara yerleştirin.');
+    return;
+  }
+
+  try{
+    // RSVP tarafındaki tüm misafirleri çek (isim, telefon, katılım, kişi sayısı)
+    const guestsMap = await getGuestsMap();
+
+    // ASSIGN içindeki her misafir-id için tablo satırı oluştur
+    const rows = [];
+    for (const [guestId, info] of Object.entries(ASSIGN)){
+      const g = guestsMap[guestId] || {};
+      const table = info && info.table ? info.table : '';
+      if (!table) continue; // masası olmayanları alma
+
+      const firstName  = g.firstName || '';
+      const lastName   = g.lastName  || '';
+      const phone      = g.phone     || '';
+      const attendance = g.attendance || '';
+      const guestCount = g.guestCount || 1;
+
+      rows.push({ table, firstName, lastName, phone, attendance, guestCount });
+    }
+
+    if (!rows.length){
+      alert('Masa düzeni için atanmış misafir bulunamadı.');
+      return;
+    }
+
+    // CSV hazırla
+    const header = ['table','firstName','lastName','phone','attendance','guestCount','weddingId'];
+    const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
+    const wid = (typeof CURRENT_WEDDING === 'string' && CURRENT_WEDDING) ? CURRENT_WEDDING : 'unknown';
+    const body = rows.map(r => [
+      q(r.table),
+      q(r.firstName),
+      q(r.lastName),
+      q(r.phone),
+      q(r.attendance),
+      q(r.guestCount),
+      q(wid)
+    ].join(',')).join('\n');
+    const csv = header.join(',') + '\n' + body;
+
+    // İndir
+    download(`seating-${wid}.csv`, csv);
+  }catch(e){
+    console.error('exportSeatingCsv error:', e);
+    alert('Masa düzeni CSV indirilemedi: ' + (e.code || e.name || '') + ' ' + (e.message || ''));
+  }
+}
 // === Seating kaydet ===
 async function saveSeating(){
   const batch = db.batch();
@@ -586,7 +738,74 @@ async function saveSeating(){
   alert('Oturma planı kaydedildi.');
 }
 
+/* ==== MİSAFİR SEKMELERİ ==== */
+function setupGuestTabs(){
+  const btnAll  = document.getElementById('tabAllGuests');
+  const btnAsg  = document.getElementById('tabAssignedGuests');
+  const btnUn   = document.getElementById('tabUnassignedGuests');
+
+  const tabAll  = document.getElementById('tabAll');
+  const tabAsg  = document.getElementById('tabAssigned');
+  const tabUn   = document.getElementById('tabUnassigned');
+
+  if (!btnAll || !btnAsg || !btnUn) return;
+
+  btnAll.onclick = () => {
+    tabAll.style.display = 'block';
+    tabAsg.style.display = 'none';
+    tabUn.style.display  = 'none';
+  };
+
+  btnAsg.onclick = async () => {
+    tabAll.style.display = 'none';
+    tabAsg.style.display = 'block';
+    tabUn.style.display  = 'none';
+
+    const guests = await getGuestsMap();
+    const list = [];
+    for(const [gid, info] of Object.entries(ASSIGN)){
+      const g = guests[gid] || {};
+      const name = `${g.firstName||''} ${g.lastName||''}`.trim() || g.phone || gid;
+      list.push(`• ${name} — Masa ${info.table}`);
+    }
+    document.getElementById('assignedList').innerHTML =
+      list.length ? list.join('<br>') : '<span class="muted">Hiç yerleştirilen yok</span>';
+  };
+
+  btnUn.onclick = async () => {
+    tabAll.style.display = 'none';
+    tabAsg.style.display = 'none';
+    tabUn.style.display  = 'block';
+
+    const guests = await getGuestsMap();
+    const list = [];
+    for(const [gid, g] of Object.entries(guests)){
+      if (!ASSIGN[gid]){
+        const nm = `${g.firstName||''} ${g.lastName||''}`.trim() || g.phone || gid;
+        list.push({ name: nm, _id: g._id });
+      }
+    }
+    const box = document.getElementById('unassignedList');
+    if (!list.length){
+      box.innerHTML = '<span class="muted">Yerleştirilmeyen yok</span>';
+    } else {
+      box.innerHTML = '';
+      list.forEach(item => {
+        const chip = document.createElement('div');
+        chip.className = 'guest-chip';
+        chip.textContent = item.name;
+        chip.draggable = true;
+        chip.dataset.id = item._id;  // gerçek id bağlayabilmek için
+        chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', item._id); chip.classList.add('ghost'); });
+        chip.addEventListener('dragend', () => chip.classList.remove('ghost'));
+        box.appendChild(chip);
+      });
+    }
+  };
+}
+
 function boot(){
+  setupGuestTabs();
   enableDnD();
   const lastWedding = localStorage.getItem('ws_admin_wedding');
   if (lastWedding) el('weddingId').value = lastWedding;
@@ -595,6 +814,11 @@ function boot(){
   el('refreshBtn').onclick = loadGuests;
   el('loadSeatingBtn').onclick = loadSeating;
   el('saveSeatingBtn').onclick = saveSeating;
+
+  const downloadSeatingBtn = el('downloadSeatingBtn');
+  if (downloadSeatingBtn){
+    downloadSeatingBtn.onclick = exportSeatingCsv;
+  }
 
   // Menü kontrol barını garantiye al
   ensureMenuControls();
@@ -697,6 +921,9 @@ async function openTableDetail(tableKey, anchor){
   tip.style.fontSize = '14px';
   tip.style.zIndex = 9999;
   tip.style.maxWidth = '240px';
+  tip.style.color = '#0f172a';         // Koyu yazı rengi
+  tip.style.opacity = '1';             // Tam opak
+  tip.style.filter = 'none';           // Her türlü blur / soluk efekti kaldır
 
   const rect = anchor.getBoundingClientRect();
   tip.style.left = (rect.right + 10) + 'px';
@@ -706,7 +933,7 @@ async function openTableDetail(tableKey, anchor){
     <div style="font-weight:600;margin-bottom:6px">Masa ${key}</div>
     <div id="ttList" style="margin-bottom:6px">Yükleniyor…</div>
     <button id="ttNotify" style="margin-top:2px;padding:4px 8px;border:0;border-radius:6px;background:#16a34a;color:#fff;cursor:pointer;display:block;width:100%;font-size:13px;">
-      Bu masadakilere WhatsApp gönder
+      Bu masadakilere SMS gönder.
     </button>
     <button id="ttClose" style="margin-top:6px;padding:4px 8px;border:0;border-radius:6px;background:#eee;cursor:pointer;display:block;width:100%;font-size:13px;">
       Kapat
@@ -745,19 +972,19 @@ async function openTableDetail(tableKey, anchor){
         openTableDetail(key, anchor);
       };
     });
-    // Bind WhatsApp notify button
-    const notifyBtn = document.getElementById('ttNotify');
-    if (notifyBtn && !notifyBtn.dataset.bound){
-      notifyBtn.dataset.bound = '1';
-      notifyBtn.onclick = async () => {
-        try{
-          await notifyTableWhatsApp(key);
-        }catch(e){
-          console.error('notifyTableWhatsApp error', e);
-          alert('Bu masaya WhatsApp gönderilirken hata oluştu.');
+        // Bind SMS notify button
+        const notifyBtn = document.getElementById('ttNotify');
+        if (notifyBtn && !notifyBtn.dataset.bound){
+          notifyBtn.dataset.bound = '1';
+          notifyBtn.onclick = async () => {
+            try{
+              await notifyTableWhatsApp(key);
+            }catch(e){
+              console.error('notifyTableWhatsApp error', e);
+              alert('Bu masaya SMS gönderilirken hata oluştu.');
+            }
+          };
         }
-      };
-    }
 
   }catch(e){
     document.getElementById('ttList').innerHTML='<div style="color:red">Hata oluştu</div>';
@@ -787,7 +1014,7 @@ function bindTableDetailUi(){
   }
 }
 
-/* ========= MASA MESAJLARI — WhatsApp Bildirimleri ========= */
+/* ========= MASA MESAJLARI — SMS Bildirimleri ========= */
 
 
 // RSVP haritası: gerektikçe taze okur (cache kullanmıyoruz ki tutarsızlık olmasın)
@@ -810,8 +1037,7 @@ function buildRsvpLink(){
 }
 
 function buildSeatMessage(name, tableNo, rsvpLink){
-  // Artık sadece masa numarasını içeren basit bir mesaj gönderiyoruz.
-  return `Merhaba, düğünümüzde masa numaranız: ${tableNo} 🎉`;
+  return `Merhaba, düğünümüzde masa numaranız: ${tableNo}`;
 }
 
 async function prepareSeatNotifications(){
@@ -840,39 +1066,44 @@ async function notifyTableWhatsApp(tableKey){
     return;
   }
 
-  // Bu masaya atanmış misafirleri hazırlayalım (ASSIGN + RSVP verisi üzerinden)
+  // Bu masadaki tüm misafirleri al
   const all = await prepareSeatNotifications();
   const list = all.filter(it => String(it.tableNo || '').trim() === key);
 
   if (!list.length){
-    alert(`Masa ${key} için gönderilecek misafir bulunamadı. (Bu masaya atanmış kimse yok.)`);
+    alert(`Masa ${key} için gönderilecek misafir bulunamadı.`);
     return;
   }
 
-  // Toplu kullanım için tek bir genel mesaj: sadece masa numarası
-  const msg = `Merhaba, düğünümüzde masa numaranız: ${key} 🎉`;
+  // Benzersiz yap
+  const numbers = list
+    .map(it => {
+      const raw = String(it.phone || '').replace(/\D+/g, '');
+      const norm = String(it.waPhone || '').replace(/\D+/g, '');
+      return [raw, norm];
+    })
+    .flat()
+    .filter(n => n && n.length >= 8);
+  const recipients = Array.from(new Set(numbers));
 
-  if (!confirm(`Masa ${key} için WhatsApp'ta tek bir toplu mesaj penceresi açılacak.\nAlıcıları WhatsApp içinde kendin seçeceksin.\n\nDevam edilsin mi?`)){
-    return;
-  }
+  // Tek ortak mesaj
+  const msg = `Merhaba, düğünümüzde masa numaranız: ${key}`;
 
-  // Sadece 1 adet WhatsApp penceresi açılır, alıcı seçimini kullanıcı yapar
-  const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-  window.open(wa, '_blank');
+  // --- iOS ve macOS iMessage toplu numara denemesi ---
+  // macOS ve iOS aynı formatı kullanıyor: sms:&addresses=NUM1,NUM2&body=...
+  const appleSms = `sms:&addresses=${recipients.join(',')}&body=${encodeURIComponent(msg)}`;
 
-  // İsteğe bağlı: bu masadaki herkes için "bildirildi" kaydı düşelim
-  try{
-    for (let i = 0; i < list.length; i++){
-      const it = list[i];
-      await markNotified(it.guestId, it.tableNo);
-    }
-  }catch(e){
-    console.warn('markNotified (toplu) error', e);
-  }
+  // --- Android toplu SMS ---
+  const androidSms = `sms:${recipients.join(',')}?body=${encodeURIComponent(msg)}`;
 
-  alert(`Masa ${key} için toplu WhatsApp mesajı açıldı.\nLütfen WhatsApp içinde alıcıları seçip göndermeyi onaylayın.`);
+  // Önce Apple formatını aç (Mac/iPhone için)
+  window.location.href = appleSms;
+
+  // 300ms sonra Android formatını da aç (Android cihazlarda çalışıyor)
+  setTimeout(() => {
+    window.location.href = androidSms;
+  }, 300);
 }
-
 async function markNotified(guestId, tableNo){
   try{
     const sentAt = (firebase.firestore && firebase.firestore.FieldValue)
@@ -906,14 +1137,16 @@ function renderNotifyPanel(list){
   if (cnt) cnt.textContent = String(list.length);
   if (ul){
     ul.innerHTML = list.map(item => {
-      const wa = item.waPhone
-        ? `https://wa.me/${item.waPhone}?text=${encodeURIComponent(item.message)}`
-        : `https://wa.me/?text=${encodeURIComponent(item.message)}`;
+      // SMS link: telefondaki SMS uygulamasını açar, mesaj gövdesi hazır gelir
+      const sms = item.waPhone
+        ? `sms:${item.waPhone}?&body=${encodeURIComponent(item.message)}`
+        : `sms:?&body=${encodeURIComponent(item.message)}`;
+
       return `
         <li class="notify-item">
           <div><b>${esc(item.fullName||'(İsimsiz)')}</b> · Masa <b>${esc(item.tableNo||'?')}</b> · Tel: ${esc(item.phone||'–')}</div>
           <div class="notify-actions">
-            <a href="${wa}" target="_blank" rel="noopener" class="btn small">WhatsApp</a>
+            <a href="${sms}" class="btn small secondary">SMS</a>
             <button class="btn small ghost" data-copy="${esc(item.message)}">Metni Kopyala</button>
           </div>
         </li>`;
@@ -934,13 +1167,14 @@ function renderNotifyPanel(list){
     btnAll.onclick = async ()=>{
       for (let i=0; i<list.length; i++){
         const it = list[i];
-        const wa = it.waPhone ? `https://wa.me/${it.waPhone}?text=${encodeURIComponent(it.message)}`
-                              : `https://wa.me/?text=${encodeURIComponent(it.message)}`;
-        window.open(wa, '_blank');
+        const sms = it.waPhone
+          ? `sms:${it.waPhone}?&body=${encodeURIComponent(it.message)}`
+          : `sms:?&body=${encodeURIComponent(it.message)}`;
+        window.open(sms, '_blank');
         await markNotified(it.guestId, it.tableNo);
         await new Promise(r=>setTimeout(r, 500));
       }
-      alert('WhatsApp pencereleri açıldı. Göndermeyi WhatsApp içinde onaylayın.');
+      alert('SMS pencereleri açıldı. Göndermeyi SMS uygulamasında onaylayın.');
     };
   }
 

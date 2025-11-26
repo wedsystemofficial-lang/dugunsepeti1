@@ -12,300 +12,394 @@
 
   <style>
     :root{
-      --bg:#050815;
-      --bg-soft:#0b1020;
+      --bg:#020617;
+      --bg-soft:#050816;
       --fg:#f9fafb;
       --muted:#9ca3af;
-      --accent:#fbbf24;
-      --accent-soft:rgba(251,191,36,0.18);
-      --border:#1f2937;
+      --accent:#f97316;
+      --accent-soft:rgba(249,115,22,0.16);
+      --card:#020617;
+      --card-border:#1f2937;
+      --chip:#020617;
     }
 
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
-      margin:0;
       font-family:Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
       color:var(--fg);
-      background:#000 url("img/landing-bg.jpg") center center/cover fixed no-repeat;
-    }
-
-    .overlay{
-      position:fixed;
-      inset:0;
-      background:radial-gradient(circle at 10% 0%, rgba(251,191,36,0.16), transparent 55%),
-                 radial-gradient(circle at 90% 40%, rgba(59,130,246,0.2), transparent 60%),
-                 linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.96));
-      z-index:-1;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(236,72,153,0.25), transparent 55%),
+        radial-gradient(circle at 100% 0%, rgba(249,115,22,0.22), transparent 55%),
+        radial-gradient(circle at 50% 100%, rgba(59,130,246,0.35), transparent 55%),
+        #020617;
+      -webkit-font-smoothing:antialiased;
     }
 
     .shell{
       min-height:100vh;
       display:flex;
       flex-direction:column;
+      padding:18px 22px 26px;
     }
 
     header{
-      height:64px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:0 22px;
-      background:rgba(5,8,21,0.94);
-      border-bottom:1px solid rgba(31,41,55,0.9);
-      backdrop-filter:blur(16px) saturate(160%);
+      margin-bottom:18px;
     }
 
-    .brand{
+    .header-left{
       display:flex;
       align-items:center;
       gap:10px;
-      font-weight:800;
-      letter-spacing:.05em;
-      text-transform:uppercase;
-      font-size:13px;
-    }
-    .brand-dot{
-      width:22px;
-      height:22px;
-      border-radius:8px;
-      background:radial-gradient(circle at 25% 20%, #fef3c7, #fbbf24);
-      box-shadow:0 0 16px rgba(251,191,36,0.9);
-      position:relative;
-    }
-    .brand-dot::after{
-      content:"";
-      position:absolute;
-      inset:3px;
-      border-radius:7px;
-      border:1px solid rgba(255,255,255,0.5);
     }
 
-    .nav-links{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-size:13px;
-    }
-    .nav-links a{
-      color:var(--muted);
-      text-decoration:none;
-      padding:6px 10px;
+    .header-dot{
+      width:9px;
+      height:9px;
       border-radius:999px;
-      border:1px solid transparent;
-      background:transparent;
-    }
-    .nav-links a:hover{
-      color:var(--fg);
-      border-color:rgba(148,163,184,0.7);
-      background:rgba(15,23,42,0.9);
+      background:#38bdf8;
+      box-shadow:0 0 0 4px rgba(56,189,248,0.3);
     }
 
-    .nav-links .primary{
-      background:var(--accent);
-      color:#111827;
-      box-shadow:0 10px 26px rgba(251,191,36,0.45);
+    .header-title{
+      font-size:15px;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .header-sub{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-size:12px;
+    }
+
+    .header-right span{color:var(--muted);}
+    .header-right b{color:var(--fg);}
+
+    .btn{
+      padding:7px 14px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.6);
+      background:rgba(15,23,42,0.92);
+      color:var(--fg);
+      font-size:12px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      text-decoration:none;
+    }
+
+    .btn-primary{
       border-color:transparent;
+      background:linear-gradient(135deg,#f97316,#ec4899);
+      box-shadow:0 18px 38px rgba(249,115,22,0.55);
       font-weight:600;
     }
 
-    .nav-right{
-      font-size:12px;
-      color:var(--muted);
+    .btn-ghost{
+      background:rgba(15,23,42,0.8);
     }
-    .nav-right b{color:var(--fg)}
 
     main{
       flex:1;
-      padding:20px;
-      display:flex;
-      justify-content:center;
-    }
-
-    .grid{
-      width:100%;
-      max-width:1080px;
-      display:grid;
-      grid-template-columns:minmax(0,1.4fr) minmax(0,1.6fr);
-      gap:18px;
-    }
-
-    .card{
-      background:rgba(15,23,42,0.96);
-      border-radius:18px;
-      border:1px solid rgba(31,41,55,0.95);
-      box-shadow:0 24px 60px rgba(0,0,0,0.85);
-      padding:18px 18px 16px;
-      backdrop-filter:blur(18px) saturate(150%);
-    }
-
-    h1,h2,h3{
-      margin:0 0 6px;
-    }
-
-    .muted{color:var(--muted); font-size:13px}
-
-    .product-hero{
       display:flex;
       flex-direction:column;
       gap:14px;
     }
 
-    .badge{
+    .section-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:10px;
+    }
+
+    .section-header h1{
+      font-size:22px;
+      letter-spacing:.01em;
+    }
+
+    .section-header p{
+      font-size:13px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    .filter-chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      font-size:11px;
+      margin-top:8px;
+    }
+
+    .chip{
+      padding:4px 9px;
+      border-radius:999px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:var(--chip);
+      color:var(--muted);
+    }
+
+    .chip-active{
+      border-color:rgba(56,189,248,0.9);
+      color:#e0f2fe;
+      background:var(--accent-soft);
+    }
+
+    .product-grid{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
+      gap:14px;
+    }
+
+    .card{
+      background:rgba(15,23,42,0.94);
+      border-radius:18px;
+      border:1px solid rgba(15,23,42,1);
+      box-shadow:0 22px 60px rgba(0,0,0,0.85);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:260px;
+    }
+
+    .card-media{
+      position:relative;
+      height:150px;
+      background:#020617;
+      overflow:hidden;
+    }
+
+    .card-media img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .card-body{
+      padding:10px 12px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .card-title{
+      font-size:14px;
+      font-weight:600;
+    }
+
+    .card-sub{
+      font-size:11px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .rating-stars{
+      color:#facc15;
+      font-size:11px;
+    }
+
+    .thumb-row{
+      margin-top:6px;
+      display:flex;
+      gap:6px;
+      overflow-x:auto;
+      padding-bottom:3px;
+    }
+
+    .thumb{
+      width:42px;
+      height:42px;
+      border-radius:10px;
+      background:#020617;
+      border:1px solid rgba(31,41,55,0.9);
+      flex:0 0 auto;
+      overflow:hidden;
+    }
+
+    .thumb img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .card-actions{
+      margin-top:8px;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .card-actions .btn{
+      flex:1;
+      justify-content:center;
+      font-size:12px;
+      padding:7px 8px;
+    }
+
+    .btn-fav{
+      border-color:rgba(55,65,81,0.9);
+      background:rgba(15,23,42,0.8);
+    }
+
+    .qty-control{
       display:inline-flex;
       align-items:center;
       gap:6px;
       padding:4px 8px;
       border-radius:999px;
-      border:1px solid rgba(251,191,36,0.7);
-      background:var(--accent-soft);
-      color:var(--accent);
-      font-size:11px;
-      font-weight:600;
-      text-transform:uppercase;
-      letter-spacing:.05em;
-    }
-
-    .price-line{
-      font-size:14px;
-      margin-top:4px;
-    }
-    .price-line b{color:var(--accent)}
-
-    .rose-preview{
-      margin-top:8px;
-      border-radius:14px;
       border:1px solid rgba(55,65,81,0.9);
-      background:radial-gradient(circle at 15% 0, rgba(251,113,133,0.15), transparent 55%),
-                 radial-gradient(circle at 90% 90%, rgba(59,130,246,0.16), transparent 55%),
-                 #020617;
-      padding:14px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-
-    .rose-circle{
-      width:48px;
-      height:48px;
-      border-radius:50%;
-      background:radial-gradient(circle at 30% 30%, #fecaca, #fb7185);
-      box-shadow:0 0 20px rgba(248,113,113,0.7);
-      border:2px solid rgba(248,250,252,0.7);
-    }
-
-    .form-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:10px;
-      margin-top:10px;
-    }
-    label{font-size:12px; font-weight:600}
-
-    input[type="text"], input[type="number"], select{
-      width:100%;
-      margin-top:4px;
-      padding:7px 9px;
-      border-radius:999px;
-      border:1px solid rgba(55,65,81,0.9);
-      background:#020617;
-      color:var(--fg);
-      font-size:13px;
-      outline:none;
-    }
-
-    input:focus, select:focus{
-      border-color:var(--accent);
-      box-shadow:0 0 0 2px rgba(251,191,36,0.25);
-    }
-
-    .full-row{grid-column:1 / -1}
-
-    .btn{
-      padding:9px 12px;
-      border-radius:999px;
-      border:1px solid rgba(55,65,81,0.95);
-      background:rgba(15,23,42,1);
-      color:var(--fg);
-      font-size:13px;
-      cursor:pointer;
-    }
-    .btn.primary{
-      border-color:transparent;
-      background:linear-gradient(135deg,#22c55e,#16a34a);
-      box-shadow:0 16px 36px rgba(22,163,74,0.5);
-      font-weight:600;
-    }
-
-    .btn.secondary{
       background:rgba(15,23,42,0.9);
     }
 
-    .btn-row{
+    .qty-btn{
+      width:20px;
+      height:20px;
+      border-radius:999px;
+      border:0;
+      background:rgba(37,99,235,0.9);
+      color:#f9fafb;
+      font-size:13px;
+      line-height:1;
+      cursor:pointer;
       display:flex;
-      gap:8px;
-      margin-top:12px;
+      align-items:center;
+      justify-content:center;
     }
 
-    /* Sepet */
+    .qty-value{
+      min-width:18px;
+      text-align:center;
+      font-size:12px;
+    }
+
+    .cart-panel{
+      position:fixed;
+      right:18px;
+      top:70px;
+      width:260px;
+      background:rgba(15,23,42,0.97);
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,0.4);
+      box-shadow:0 22px 60px rgba(0,0,0,0.75);
+      padding:10px 12px 12px;
+      z-index:50;
+      font-size:12px;
+    }
+
     .cart-header{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      margin-bottom:6px;
+      margin-bottom:4px;
     }
 
-    .cart-total{
-      font-size:14px;
+    .cart-title{
+      font-weight:600;
+      font-size:13px;
     }
-    .cart-total b{color:var(--accent)}
 
-    table{
-      width:100%;
-      border-collapse:collapse;
+    .cart-body{
+      max-height:210px;
+      overflow:auto;
+      margin-top:4px;
+    }
+
+    .cart-items{
+      list-style:none;
+      margin:0;
+      padding:0;
+    }
+
+    .cart-item{
+      padding:4px 0;
+      border-bottom:1px dashed rgba(55,65,81,0.7);
+    }
+
+    .cart-item:last-child{
+      border-bottom:none;
+    }
+
+    .cart-item-title{
+      font-size:12px;
+      font-weight:500;
+    }
+
+    .cart-item-meta{
+      font-size:11px;
+      color:var(--muted);
+    }
+
+    .cart-empty{
+      font-size:11px;
+      color:var(--muted);
+    }
+
+    .cart-footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:8px;
+      padding-top:6px;
+      border-top:1px solid rgba(55,65,81,0.9);
       font-size:12px;
     }
-    th,td{
-      padding:6px 6px;
-      border-bottom:1px solid rgba(31,41,55,0.9);
-      text-align:left;
-    }
-    th{color:var(--muted); font-weight:600; font-size:11px}
 
-    .cart-actions{
+    .cart-total-label{
+      color:var(--muted);
+    }
+
+    .cart-total-value{
+      font-weight:600;
+    }
+
+    .cart-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 9px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.6);
+      background:rgba(15,23,42,0.92);
+      font-size:11px;
+    }
+
+    .cart-count-badge{
+      min-width:18px;
+      height:18px;
+      border-radius:999px;
+      background:var(--accent);
+      color:#020617;
       display:flex;
-      gap:8px;
-      margin-top:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:600;
+      font-size:11px;
     }
 
-    /* Toast */
-    #toast{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      background:rgba(15,23,42,0.98);
-      border-radius:12px;
-      border:1px solid rgba(55,65,81,0.9);
-      padding:8px 11px;
-      font-size:13px;
-      opacity:0;
-      transform:translateY(10px);
-      pointer-events:none;
-      transition:all .2s ease;
-      z-index:50;
-    }
-    #toast.show{
-      opacity:1;
-      transform:translateY(0);
-    }
-
-    @media (max-width:900px){
-      main{
-        padding:14px;
-      }
-      .grid{
-        grid-template-columns:minmax(0,1fr);
-      }
+    @media (max-width:720px){
+      .shell{padding:14px 12px 20px;}
+      header{flex-direction:column;align-items:flex-start;gap:8px;}
+      .section-header{flex-direction:column;align-items:flex-start;}
     }
   </style>
 
@@ -329,269 +423,332 @@
 </head>
 
 <body>
-  <div class="overlay"></div>
   <div class="shell">
     <header>
-      <div class="brand">
-        <div class="brand-dot"></div>
-        <span>DUGUNSEPETI PROMOSYONLAR</span>
+      <div class="header-left">
+        <div class="header-dot"></div>
+        <div>
+          <div class="header-title">DugunSepeti</div>
+          <div class="header-sub">Masa üstü hediyelikler ve promosyonlar</div>
+        </div>
       </div>
-      <div class="nav-links">
-        <a href="admin.html">Admin Paneli</a>
-        <a href="landing.html" class="primary">Ürün Sayfası</a>
-      </div>
-      <div class="nav-right">
-        Düğün ID: <b id="navWedding">-</b>
+      <div class="header-right">
+        <span>Düğün ID: <b id="navWedding">-</b></span>
+        <div class="cart-chip">
+          Sepet
+          <span id="cartCount" class="cart-count-badge">0</span>
+        </div>
+        <a href="admin.html" class="btn btn-primary">Admin Paneli</a>
       </div>
     </header>
 
-    <main>
-      <div class="grid">
-        <!-- SOL: ÜRÜN / FORM -->
-        <section class="card product-hero">
-          <div>
-            <div class="badge">Masa Gülü · Kişi başı 25 TL</div>
-            <h1>Masa Gülü Siparişi</h1>
-            <p class="muted">Her misafirin önüne yerleştirilecek zarif gül buketleri. Fiyat kişi başı hesaplanır; sistem otomatik olarak toplam tutarı çıkarır.</p>
-            <p class="price-line">Birim fiyat: <b>25 TL / kişi</b></p>
-          </div>
-
-          <div class="rose-preview">
-            <div class="rose-circle"></div>
-            <div>
-              <h3 style="margin:0 0 4px">Premium gül aranjmanı</h3>
-              <p class="muted" style="margin:0;font-size:12px">Kırmızı veya pastel tonlarda, masa konseptine uygun şekilde hazırlanmış VIP masa gülleri.</p>
-            </div>
-          </div>
-
-          <form id="roseForm">
-            <div class="form-grid">
-              <div>
-                <label for="tableId">Masa</label>
-                <input id="tableId" placeholder="Örn: M1, M2..." required>
-              </div>
-              <div>
-                <label for="guestCount">Kişi sayısı (bu masa)</label>
-                <input id="guestCount" type="number" min="1" step="1" value="8" required>
-              </div>
-              <div class="full-row">
-                <label for="note">Not (opsiyonel)</label>
-                <input id="note" placeholder="Örn: Gelin masası için beyaz gül tercih edilsin.">
-              </div>
-            </div>
-
-            <div class="btn-row">
-              <button type="submit" class="btn primary">Sepete ekle</button>
-              <button type="button" id="clearForm" class="btn secondary">Temizle</button>
-            </div>
-          </form>
-          <div style="margin-top:10px; border-top:1px dashed rgba(55,65,81,0.8); padding-top:10px;">
-            <p class="muted" style="font-size:12px; margin-bottom:6px;">
-              Hepsini tek tıkla halletmek ister misiniz? Tüm masalara standart gül paketi ekleyin.
-            </p>
-            <button type="button" id="addAllTablesBtn" class="btn secondary" style="width:100%; justify-content:center;">
-              Tüm masalara gül ekle (paket — 3000 TL)
-            </button>
-          </div>
-        </section>
-
-        <!-- SAĞ: SEPET -->
-        <section class="card">
-          <div class="cart-header">
-            <div>
-              <h2>Sepet</h2>
-              <p class="muted">Bu düğüne ait masa gülü siparişleri. Onayladığınızda Firestore'a kaydedilir.</p>
-            </div>
-            <div class="cart-total">
-              Toplam: <b><span id="cartTotal">0</span> TL</b>
-            </div>
-          </div>
-
-          <div style="max-height:260px; overflow:auto; border-radius:12px; border:1px solid rgba(31,41,55,0.95);">
-            <table>
-              <thead>
-                <tr>
-                  <th>Masa</th>
-                  <th>Kişi</th>
-                  <th>Birim (TL)</th>
-                  <th>Toplam (TL)</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="cartBody">
-                <!-- JS ile doldurulacak -->
-              </tbody>
-            </table>
-          </div>
-
-          <div class="cart-actions">
-            <button type="button" id="clearCart" class="btn secondary">Sepeti temizle</button>
-            <button type="button" id="saveCart" class="btn primary" style="flex:1">Siparişi kaydet</button>
-          </div>
-
-          <p class="muted" style="margin-top:10px; font-size:12px; line-height:1.4">
-            Ödeme altyapısı (kredi kartı vb.) daha sonra eklenecek. Şimdilik siparişler Firestore'da bu düğüne ait bir promosyon kaydı olarak saklanır.
-          </p>
-        </section>
+    <div class="cart-panel" id="cartPanel">
+      <div class="cart-header">
+        <div class="cart-title">Sepet</div>
       </div>
+      <div class="cart-body">
+        <div id="cartEmpty" class="cart-empty">Sepetiniz boş.</div>
+        <ul id="cartItems" class="cart-items"></ul>
+      </div>
+      <div class="cart-footer">
+        <span class="cart-total-label">Toplam</span>
+        <span id="cartTotal" class="cart-total-value">0 ₺</span>
+      </div>
+    </div>
+
+    <main>
+      <div class="section-header">
+        <div>
+          <h1>Masa Üstü Hediyelikler</h1>
+          <p>Çiçek, mum, mini sukulent ve QR kart dahil, salonunuzla uyumlu masa üstü çözümleri.</p>
+          <div class="filter-chips">
+            <span class="chip chip-active">Tümü</span>
+            <span class="chip">Çiçek</span>
+            <span class="chip">Bitki</span>
+            <span class="chip">Mum</span>
+            <span class="chip">Lavanta &amp; Koku</span>
+            <span class="chip">QR / Fotoğraf</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="product-grid">
+        <!-- 1: Table Roses -->
+        <article class="card" data-product-id="roses">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-roses-main/600/400" alt="Table Roses" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Masalarda Gül</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★★</span> · 6 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-roses-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-roses-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-roses-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <div class="qty-control">
+                <button type="button" class="qty-btn" data-dir="-1">−</button>
+                <span class="qty-value">1</span>
+                <button type="button" class="qty-btn" data-dir="1">+</button>
+              </div>
+              <button type="button" class="btn btn-primary add-to-cart">Sepete Ekle</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2: Mini Succulents -->
+        <article class="card" data-product-id="succulent">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-succulent-main/600/400" alt="Mini Succulents" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Mini Succulents</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★☆</span> · 32 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-succulent-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-succulent-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-succulent-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3: Scented Candles -->
+        <article class="card" data-product-id="candles">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-candles-main/600/400" alt="Scented Candles" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Scented Candles</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★☆</span> · 19 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-candles-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-candles-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-candles-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4: Honey Jar / Wood Set -->
+        <article class="card" data-product-id="honey">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-honey-main/600/400" alt="Messages on Wood" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Messages on Wood</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★★</span> · 28 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-honey-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-honey-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-honey-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5: Lavanta Parfüm -->
+        <article class="card" data-product-id="lavender">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-lavender-main/600/400" alt="Lavender Perfume" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Lavender Perfume</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★☆☆</span> · 39 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-lavender-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-lavender-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-lavender-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6: Sticker / Magnet Set -->
+        <article class="card" data-product-id="sticker">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-sticker-main/600/400" alt="Sticker / Magnet Set" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Sticker / Magnet Set</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★☆</span> · 43 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-sticker-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-sticker-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-sticker-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 7: QR Foto Set -->
+        <article class="card" data-product-id="qr">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-qr-main/600/400" alt="QR Photo Card" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">QR Photo Card</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★★☆</span> · 25 değerlendirme</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-qr-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-qr-2/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-qr-3/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 8: Custom Favors -->
+        <article class="card" data-product-id="custom">
+          <div class="card-media">
+            <img src="https://picsum.photos/seed/promo-custom-main/600/400" alt="Custom Favors" />
+          </div>
+          <div class="card-body">
+            <div class="card-title">Custom Favors</div>
+            <div class="card-sub">Ankara · <span class="rating-stars">★★★☆☆</span> · Özel tasarım istek üzerine</div>
+            <div class="thumb-row">
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-custom-1/120/120" alt="" /></div>
+              <div class="thumb"><img src="https://picsum.photos/seed/promo-custom-2/120/120" alt="" /></div>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-primary">Sepete Ekle</button>
+              <button type="button" class="btn btn-fav">☆ Favori</button>
+            </div>
+          </div>
+        </article>
+
+      </section>
     </main>
   </div>
 
-  <div id="toast"></div>
-
   <script>
-    const UNIT_PRICE = 25;
-const PACKAGE_PRICE = 3000;  // tüm masalar gül paketi
-let cart = [];
-let currentWeddingId = null;
-
-    function showToast(msg){
-      const t = document.getElementById('toast');
-      if(!t) return;
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(()=> t.classList.remove('show'), 1800);
-    }
-
     function detectWeddingId(){
       const params = new URLSearchParams(window.location.search);
       const fromQuery = params.get('wedding');
       const fromStorage = localStorage.getItem('currentWeddingId') || localStorage.getItem('weddingId');
-      currentWeddingId = fromQuery || fromStorage || null;
+      const currentWeddingId = fromQuery || fromStorage || null;
       const navSpan = document.getElementById('navWedding');
       if(navSpan){ navSpan.textContent = currentWeddingId || '-'; }
-      if(!currentWeddingId){
-        showToast('Uyarı: Düğün ID bulunamadı. ?wedding=xxx ile veya admin panelinden açın.');
-      }
     }
 
-    function renderCart(){
-      const body = document.getElementById('cartBody');
-      const totalEl = document.getElementById('cartTotal');
-      if(!body || !totalEl) return;
-      body.innerHTML = '';
-      let total = 0;
-      cart.forEach((item, idx)=>{
-        const row = document.createElement('tr');
-        const lineTotal = item.guestCount * item.unitPrice;
-        total += lineTotal;
-        row.innerHTML = `
-          <td>${item.tableId}</td>
-          <td>${item.guestCount}</td>
-          <td>${item.unitPrice}</td>
-          <td>${lineTotal}</td>
-          <td><button type="button" data-idx="${idx}" class="btn secondary" style="font-size:11px;padding:3px 7px;">Sil</button></td>
-        `;
-        body.appendChild(row);
-      });
-      totalEl.textContent = total;
+    const PRODUCTS = {
+      roses:    { name: 'Masalarda Gül',           price: 800 },
+      succulent:{ name: 'Mini Succulents',         price: 600 },
+      candles:  { name: 'Scented Candles',         price: 550 },
+      honey:    { name: 'Messages on Wood',        price: 650 },
+      lavender: { name: 'Lavender Perfume',        price: 450 },
+      sticker:  { name: 'Sticker / Magnet Set',    price: 350 },
+      qr:       { name: 'QR Photo Card',           price: 300 },
+      custom:   { name: 'Custom Favors',           price: 700 }
+    };
 
-      body.querySelectorAll('button[data-idx]').forEach(btn=>{
-        btn.addEventListener('click', e=>{
-          const i = parseInt(e.currentTarget.getAttribute('data-idx'),10);
-          if(!isNaN(i)){
-            cart.splice(i,1);
-            renderCart();
-          }
-        });
-      });
-    }
+    const cartState = {};
 
-    async function saveCartToFirestore(){
-      if(!currentWeddingId){
-        showToast('Önce geçerli bir Düğün ID ile sayfayı açın.');
-        return;
-      }
-      if(!cart.length){
-        showToast('Sepet boş.');
-        return;
-      }
+    function formatTry(amount){
+      const n = Number(amount) || 0;
       try{
-        const payload = {
-          weddingId: currentWeddingId,
-          type: 'rose-order',
-          unitPrice: UNIT_PRICE,
-          currency: 'TRY',
-          items: cart.map(c=>({
-            tableId: c.tableId,
-            guestCount: c.guestCount,
-            note: c.note || null,
-            total: c.guestCount * c.unitPrice,
-          })),
-          totalAmount: cart.reduce((sum, c)=> sum + c.guestCount * c.unitPrice, 0),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        };
-
-        await db
-          .collection('weddings')
-          .doc(currentWeddingId)
-          .collection('promotions')
-          .add(payload);
-
-        showToast('Sipariş Firestore\'a kaydedildi.');
-        cart = [];
-        renderCart();
-      }catch(err){
-        console.error(err);
-        alert('Sipariş kaydedilirken hata oluştu: ' + err.message);
+        return n.toLocaleString('tr-TR') + ' ₺';
+      }catch(e){
+        return n + ' ₺';
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-  detectWeddingId();
+    function updateCartDom(){
+      const itemsEl = document.getElementById('cartItems');
+      const emptyEl = document.getElementById('cartEmpty');
+      const totalEl = document.getElementById('cartTotal');
+      const countEl = document.getElementById('cartCount');
 
-  const form = document.getElementById('roseForm');
-  const clearFormBtn = document.getElementById('clearForm');
-  const clearCartBtn = document.getElementById('clearCart');
-  const saveCartBtn = document.getElementById('saveCart');
-  const addAllTablesBtn = document.getElementById('addAllTablesBtn');
+      const entries = Object.values(cartState);
+      let total = 0;
+      let count = 0;
 
-      if(form){
-        form.addEventListener('submit', e => {
-          e.preventDefault();
-          const tableId = document.getElementById('tableId').value.trim();
-          const guestCountValue = document.getElementById('guestCount').value;
-          const note = document.getElementById('note').value.trim();
+      if (!entries.length){
+        if (itemsEl) itemsEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (totalEl) totalEl.textContent = '0 ₺';
+        if (countEl) countEl.textContent = '0';
+        return;
+      }
 
-          const guestCount = parseInt(guestCountValue, 10);
+      const parts = [];
+      entries.forEach(it => {
+        const line = (it.price || 0) * (it.qty || 0);
+        total += line;
+        count += (it.qty || 0);
+        parts.push(
+          `<li class="cart-item">` +
+            `<div class="cart-item-title">${it.name}</div>` +
+            `<div class="cart-item-meta">${it.qty} × ${formatTry(it.price)}</div>` +
+          `</li>`
+        );
+      });
 
-          if(!tableId || !guestCount || guestCount < 1){
-            showToast('Lütfen masa ve kişi sayısını doğru girin.');
-            return;
-          }
+      if (itemsEl) itemsEl.innerHTML = parts.join('');
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (totalEl) totalEl.textContent = formatTry(total);
+      if (countEl) countEl.textContent = String(count);
+    }
 
-          cart.push({
-            tableId,
-            guestCount,
-            unitPrice: UNIT_PRICE,
-            note,
+    function initPromotionsPage(){
+      detectWeddingId();
+
+      const cards = document.querySelectorAll('.card[data-product-id]');
+      cards.forEach(card => {
+        const pid = card.getAttribute('data-product-id');
+        if (!pid || !PRODUCTS[pid]) return;
+
+        let qty = 1;
+        const qtyControl = card.querySelector('.qty-control');
+        const qtyValueEl = qtyControl ? qtyControl.querySelector('.qty-value') : null;
+        if (qtyControl && qtyValueEl){
+          qtyValueEl.textContent = '1';
+          qtyControl.querySelectorAll('.qty-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const dir = Number(btn.getAttribute('data-dir') || '0');
+              qty = Math.max(1, qty + dir);
+              qtyValueEl.textContent = String(qty);
+            });
           });
+        }
 
-          renderCart();
-          showToast('Sepete eklendi.');
-        });
-      }
+        const addBtn = card.querySelector('.add-to-cart') || card.querySelector('.btn-primary');
+        if (addBtn){
+          addBtn.addEventListener('click', () => {
+            const baseQty = qtyControl ? qty : 1;
+            const prev = cartState[pid]?.qty || 0;
+            const product = PRODUCTS[pid];
+            cartState[pid] = {
+              name: product.name,
+              price: product.price,
+              qty: prev + baseQty
+            };
+            updateCartDom();
+          });
+        }
+      });
+    }
 
-      if(clearFormBtn){
-        clearFormBtn.addEventListener('click', () => {
-          document.getElementById('tableId').value = '';
-          document.getElementById('guestCount').value = 8;
-          document.getElementById('note').value = '';
-        });
-      }
-
-      if(clearCartBtn){
-        clearCartBtn.addEventListener('click', () => {
-          cart = [];
-          renderCart();
-          showToast('Sepet temizlendi.');
-        });
-      }
-
-      if(saveCartBtn){
-        saveCartBtn.addEventListener('click', saveCartToFirestore);
-      }
-    });
+    window.addEventListener('DOMContentLoaded', initPromotionsPage);
   </script>
 </body>
 </html>
